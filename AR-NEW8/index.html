@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Toán Học: Diện Tích Hồ Bơi</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #87CEEB;
+        }
+
+        #infoPanel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #4FC3F7;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #666;
+            transform: translateY(-1px);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .highlight {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        #tileValues {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+        }
+
+        /* Draggable Tile UI */
+        #tileSource {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="%232196F3"><rect x="5" y="5" width="90" height="90" fill="%23BBDEFB" stroke="%231976D2" stroke-width="2"/><path d="M5 35h90M5 65h90M35 5v90M65 5v90" stroke="%231976D2" stroke-width="1"/></svg>') no-repeat center;
+            background-size: cover;
+            border: 3px solid white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            cursor: grab;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #tileSource:hover {
+            transform: scale(1.1);
+            border-color: #f1c40f;
+        }
+
+        #tileSource:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+
+        .tile-label {
+            position: absolute;
+            bottom: -25px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 1px 2px black;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        /* Drag Ghost */
+        #dragGhost {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(33, 150, 243, 0.8);
+            border: 2px solid white;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            border-radius: 5px;
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 19px, #fff 20px),
+                repeating-linear-gradient(90deg, transparent, transparent 19px, #fff 20px);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+</head>
+
+<body>
+    <div id="infoPanel">
+        <h1>🏊‍♂️ Diện Tích Hồ Bơi</h1>
+        <div style="font-size: 13px; color: #aaa; margin-bottom: 5px;">
+            Dài: <b style="color:white">25m</b> | Rộng: <b style="color:white">8m</b> | Sâu: <b
+                style="color:white">1.4m</b>
+        </div>
+        <p style="font-size: 13px; color: #ccc;">Kéo viên gạch vào Đáy hoặc Thành hồ để lát.</p>
+
+        <div class="control-group">
+            <button onclick="app.showFormula()" style="background: #E91E63;">📐 Xem Công Thức & Tính Toán</button>
+            <button onclick="app.reset()" style="background: #607D8B;">🔄 Làm Mới</button>
+        </div>
+
+        <div id="tileValues">
+            <div class="stat-row">Diện tích đáy (25x8): <span id="areaBottom" class="highlight">0</span> / 200 m²</div>
+            <div class="stat-row">Diện tích xung quanh: <span id="areaSide" class="highlight">0</span> / 92.4 m²</div>
+            <div class="stat-row" style="margin-top: 5px; border-top: 1px dashed #555; padding-top: 5px;">
+                Tổng diện tích lát: <span id="areaTotal" class="highlight"
+                    style="color: #00E676; font-size: 16px;">0</span> m²
+            </div>
+
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; font-size: 11px; color: #aaa;">
+                ℹ️ Click vào hồ (khi chưa lót) để xem kích thước.
+            </div>
+        </div>
+    </div>
+
+    <!-- Tile Button for Placement Mode -->
+    <div id="tile-container" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+        <button id="tile-btn" style="
+            width: 80px; 
+            height: 80px; 
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            border: 3px solid #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        ">
+            🧱 CLICK<br>ĐỂ LÁT<br>GẠCH
+        </button>
+
+        <!-- Auto Tile Button -->
+        <button id="auto-tile-btn" style="
+            width: 80px; 
+            height: 60px; 
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            border: 3px solid #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+            margin-top: 10px;
+        ">
+            ⚡ TỰ ĐỘNG<br>LÓT GẠCH
+        </button>
+
+
+
+        <div id="mode-indicator" style="
+            margin-top: 5px;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            text-align: center;
+            display: none;
+        ">Chế độ lát gạch</div>
+    </div>
+
+    <!-- Formula Modal -->
+    <div id="formulaModal"
+        style="display: none; position: fixed; bottom: 20px; right: 20px; width: 320px; background: rgba(0, 0, 0, 0.9); color: white; padding: 20px; border-radius: 12px; border: 2px solid #E91E63; z-index: 9999; box-shadow: 0 10px 40px rgba(0,0,0,0.5); font-family: 'Segoe UI', sans-serif;">
+        <h2
+            style="margin-top: 0; color: #E91E63; text-align: center; border-bottom: 1px solid #444; padding-bottom: 10px;">
+            📐 Công Thức Tính Diện Tích</h2>
+        <div style="font-size: 15px; line-height: 1.6;">
+            <p><strong>1. Diện tích đáy hồ (S<sub>đáy</sub>):</strong><br>
+                = Dài × Rộng<br>
+                = 25 × 8 = <span style="color: #4CAF50; font-weight: bold;">200 m²</span></p>
+
+            <p><strong>2. Diện tích xung quanh (S<sub>xq</sub>):</strong><br>
+                = Chu vi đáy × Chiều cao<br>
+                = (25 + 8) × 2 × 1.4 = <span style="color: #FFC107; font-weight: bold;">92.4 m²</span></p>
+
+            <div style="border-top: 1px dashed #666; margin-top: 15px; padding-top: 10px;">
+                <strong>3. Tổng diện tích cần lát (S<sub>tp</sub>):</strong><br>
+                = S<sub>đáy</sub> + S<sub>xq</sub><br>
+                = 200 + 92.4 = <span style="color: #E91E63; font-weight: bold; font-size: 20px;">292.4 m²</span>
+            </div>
+        </div>
+        <button onclick="document.getElementById('formulaModal').style.display='none'; app.toggleDimensions(false);"
+            style="margin-top: 20px; background: #444; width: 100%; padding: 10px; border-radius: 6px; border: none; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;">Đóng</button>
+    </div>
+
+    <script>
+        class SwimmingPoolApp {
+            constructor() {
+                this.container = document.body;
+
+                // Units: 1 unit = 1 meter
+                this.poolDims = { length: 25, width: 8, depth: 1.4 };
+                this.isFlat = false;
+                this.tiledAreas = { bottom: 0, longWall1: 0, longWall2: 0, shortWall1: 0, shortWall2: 0 };
+
+                this.init();
+                this.createPool();
+                this.createEnvironment(); // Add decorations
+                this.setupLights();
+                this.setupInteraction();
+                this.animate();
+            }
+
+            createLabel(text, x, y, z) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 128; // Rectangular
+
+                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+                ctx.fillRect(0, 0, 256, 128);
+
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 4;
+                ctx.strokeRect(0, 0, 256, 128);
+
+                ctx.font = "bold 60px Arial";
+                ctx.fillStyle = "white";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(text, 128, 64);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+                const sprite = new THREE.Sprite(spriteMaterial);
+
+                sprite.position.set(x, y, z);
+                sprite.scale.set(4, 2, 1); // Scale to rational size in WORLD units
+
+                // Always render on top? No, let depth handle it
+                return sprite;
+            }
+
+            addLabels() {
+                // Length (25m) - Along the long edge
+                const lblLength = this.createLabel("25 m", 0, 0.1, -this.poolDims.width / 2 - 1.5);
+                this.scene.add(lblLength);
+
+                // Width (8m) - Along short edge
+                const lblWidth = this.createLabel("8 m", -this.poolDims.length / 2 - 1.5, 0.1, 0);
+                this.scene.add(lblWidth);
+
+                // Depth (1.4m) - Corner vertical
+                const lblDepth = this.createLabel("1.4 m", -this.poolDims.length / 2, this.poolDims.depth + 1, -this.poolDims.width / 2);
+                this.scene.add(lblDepth);
+            }
+
+            init() {
+                this.scene = new THREE.Scene();
+
+                // Beautiful gradient sky
+                this.scene.background = new THREE.Color(0x87CEEB);
+                this.scene.fog = new THREE.Fog(0x87CEEB, 50, 100);
+
+                // Improved grass with texture
+                const grassGeo = new THREE.PlaneGeometry(100, 100);
+                const grassCanvas = document.createElement('canvas');
+                grassCanvas.width = 512;
+                grassCanvas.height = 512;
+                const ctx = grassCanvas.getContext('2d');
+
+                // Grass texture
+                const grad = ctx.createLinearGradient(0, 0, 512, 512);
+                grad.addColorStop(0, '#4CAF50');
+                grad.addColorStop(0.5, '#66BB6A');
+                grad.addColorStop(1, '#4CAF50');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 512, 512);
+
+                // Add grass blades pattern
+                ctx.strokeStyle = 'rgba(56, 142, 60, 0.3)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 200; i++) {
+                    const x = Math.random() * 512;
+                    const y = Math.random() * 512;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + Math.random() * 4 - 2, y - Math.random() * 8);
+                    ctx.stroke();
+                }
+
+                const grassTex = new THREE.CanvasTexture(grassCanvas);
+                grassTex.wrapS = THREE.RepeatWrapping;
+                grassTex.wrapT = THREE.RepeatWrapping;
+                grassTex.repeat.set(10, 10);
+
+                const grassMat = new THREE.MeshStandardMaterial({
+                    map: grassTex,
+                    roughness: 0.9
+                });
+
+                // DON'T create a large grass plane that covers everything
+                // Instead, only create border strips around the pool
+                // const grass = new THREE.Mesh(grassGeo, grassMat);
+                // grass.rotation.x = -Math.PI / 2;
+                // grass.position.y = 0;
+                // grass.receiveShadow = true;
+                // this.scene.add(grass);
+                // this.grass = grass;
+
+                // Add grass border around pool (to show depth)
+                const poolLength = 25;
+                const poolWidth = 8;
+                const borderThickness = 3;
+
+                // Create 4 grass strips around pool
+                const createGrassBorder = (w, h, x, z) => {
+                    const borderGeo = new THREE.PlaneGeometry(w, h);
+                    const border = new THREE.Mesh(borderGeo, grassMat.clone());
+                    border.rotation.x = -Math.PI / 2;
+                    border.position.set(x, 0.01, z);
+                    border.receiveShadow = true;
+                    this.scene.add(border);
+                };
+
+                // Top border
+                createGrassBorder(poolLength + borderThickness * 2, borderThickness, 0, -poolWidth / 2 - borderThickness / 2);
+                // Bottom border
+                createGrassBorder(poolLength + borderThickness * 2, borderThickness, 0, poolWidth / 2 + borderThickness / 2);
+                // Left border
+                createGrassBorder(borderThickness, poolWidth, -poolLength / 2 - borderThickness / 2, 0);
+                // Right border
+                createGrassBorder(borderThickness, poolWidth, poolLength / 2 + borderThickness / 2, 0);
+
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(20, 20, 25);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                // Allow looking from below to see inside the pool depth
+                this.controls.maxPolarAngle = Math.PI;
+
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+            }
+
+
+            createPoolRim(length, width) {
+                // Create decorative stone/tile coping around pool edge
+                const rimWidth = 0.6; // 60cm wide rim - thicker to cover gap
+                const rimHeight = 0.15; // 15cm thick for visibility
+
+                // Create stone texture for rim
+                const rimCanvas = document.createElement('canvas');
+                rimCanvas.width = 512;
+                rimCanvas.height = 512;
+                const ctx = rimCanvas.getContext('2d');
+
+                // Stone pattern - beige/tan color
+                ctx.fillStyle = '#D2B48C';
+                ctx.fillRect(0, 0, 512, 512);
+
+                // Add some texture variation
+                for (let i = 0; i < 100; i++) {
+                    ctx.fillStyle = `rgba(${160 + Math.random() * 40}, ${130 + Math.random() * 30}, ${90 + Math.random() * 30}, 0.3)`;
+                    ctx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 50, Math.random() * 50);
+                }
+
+                const rimTex = new THREE.CanvasTexture(rimCanvas);
+                rimTex.wrapS = THREE.RepeatWrapping;
+                rimTex.wrapT = THREE.RepeatWrapping;
+
+                const rimMat = new THREE.MeshStandardMaterial({
+                    map: rimTex,
+                    roughness: 0.8,
+                    metalness: 0.1
+                });
+
+                // Create 4 rim pieces around pool
+                // Top rim (along -Z edge) - extends to cover corners
+                const rimTop = new THREE.Mesh(
+                    new THREE.BoxGeometry(length + rimWidth * 2, rimHeight, rimWidth),
+                    rimMat
+                );
+                rimTop.position.set(0, rimHeight / 2, -width / 2 - rimWidth / 2);
+                rimTop.castShadow = true;
+                rimTop.receiveShadow = true;
+                this.poolGroup.add(rimTop);
+
+                // Bottom rim (along +Z edge) - extends to cover corners
+                const rimBottom = new THREE.Mesh(
+                    new THREE.BoxGeometry(length + rimWidth * 2, rimHeight, rimWidth),
+                    rimMat
+                );
+                rimBottom.position.set(0, rimHeight / 2, width / 2 + rimWidth / 2);
+                rimBottom.castShadow = true;
+                rimBottom.receiveShadow = true;
+                this.poolGroup.add(rimBottom);
+
+                // Left rim (along -X edge) - extends to cover corners
+                const rimLeft = new THREE.Mesh(
+                    new THREE.BoxGeometry(rimWidth, rimHeight, width + rimWidth * 2),
+                    rimMat
+                );
+                rimLeft.position.set(-length / 2 - rimWidth / 2, rimHeight / 2, 0);
+                rimLeft.castShadow = true;
+                rimLeft.receiveShadow = true;
+                this.poolGroup.add(rimLeft);
+
+                // Right rim (along +X edge) - extends to cover corners
+                const rimRight = new THREE.Mesh(
+                    new THREE.BoxGeometry(rimWidth, rimHeight, width + rimWidth * 2),
+                    rimMat
+                );
+                rimRight.position.set(length / 2 + rimWidth / 2, rimHeight / 2, 0);
+                rimRight.castShadow = true;
+                rimRight.receiveShadow = true;
+                this.poolGroup.add(rimRight);
+
+                console.log('✨ Pool rim/coping created');
+            }
+
+            createEnvironment() {
+                // Add trees around pool
+                const createTree = (x, z) => {
+                    const trunk = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.3, 0.4, 3, 8),
+                        new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+                    );
+                    trunk.position.set(x, 1.5, z);
+                    trunk.castShadow = true;
+                    this.scene.add(trunk);
+
+                    const leaves = new THREE.Mesh(
+                        new THREE.SphereGeometry(2, 8, 8),
+                        new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.8 })
+                    );
+                    leaves.position.set(x, 4, z);
+                    leaves.castShadow = true;
+                    this.scene.add(leaves);
+                };
+
+                // Place trees
+                createTree(-18, -10);
+                createTree(-18, 10);
+                createTree(18, -10);
+                createTree(18, 10);
+
+                // Add a simple house
+                const house = new THREE.Group();
+
+                // House base
+                const walls = new THREE.Mesh(
+                    new THREE.BoxGeometry(6, 4, 5),
+                    new THREE.MeshStandardMaterial({ color: 0xF5DEB3 })
+                );
+                walls.position.y = 2;
+                walls.castShadow = true;
+                house.add(walls);
+
+                // Roof
+                const roof = new THREE.Mesh(
+                    new THREE.ConeGeometry(4.5, 2, 4),
+                    new THREE.MeshStandardMaterial({ color: 0x8B0000 })
+                );
+                roof.position.y = 5;
+                roof.rotation.y = Math.PI / 4;
+                roof.castShadow = true;
+                house.add(roof);
+
+                // Door
+                const door = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 2.5, 0.2),
+                    new THREE.MeshStandardMaterial({ color: 0x654321 })
+                );
+                door.position.set(0, 1.25, 2.6);
+                house.add(door);
+
+                house.position.set(-20, 0, 0);
+                this.scene.add(house);
+
+                // Add animated water surface
+                this.createWaterSurface();
+            }
+
+            createWaterSurface() {
+                const { length, width } = this.poolDims;
+                const waterGeo = new THREE.PlaneGeometry(length, width, 32, 32);
+
+                // Store original positions for animation
+                const positions = waterGeo.attributes.position;
+                this.waterOriginalPos = [];
+                for (let i = 0; i < positions.count; i++) {
+                    this.waterOriginalPos.push({
+                        x: positions.getX(i),
+                        y: positions.getY(i),
+                        z: positions.getZ(i)
+                    });
+                }
+
+                const waterMat = new THREE.MeshStandardMaterial({
+                    color: 0x1E88E5,
+                    transparent: true,
+                    opacity: 0.6,
+                    roughness: 0.1,
+                    metalness: 0.2
+                });
+
+                this.waterSurface = new THREE.Mesh(waterGeo, waterMat);
+                this.waterSurface.rotation.x = -Math.PI / 2;
+                this.waterSurface.position.y = -1.0; // Below ground, near pool floor
+                this.waterSurface.renderOrder = 1;
+                this.poolGroup.add(this.waterSurface);
+            }
+
+            animateWater() {
+                if (!this.waterSurface) return;
+
+                const time = Date.now() * 0.001;
+                const positions = this.waterSurface.geometry.attributes.position;
+
+                for (let i = 0; i < positions.count; i++) {
+                    const orig = this.waterOriginalPos[i];
+                    const wave = Math.sin(orig.x * 2 + time) * 0.05 +
+                        Math.sin(orig.y * 2 + time * 1.3) * 0.05;
+                    positions.setZ(i, wave);
+                }
+
+                positions.needsUpdate = true;
+                this.waterSurface.geometry.computeVertexNormals();
+            }
+
+            setupLights() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(10, 20, 10);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                this.scene.add(dirLight);
+            }
+
+            createTileTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+
+                // Blue background
+                ctx.fillStyle = '#2196F3';
+                ctx.fillRect(0, 0, 512, 512);
+
+                // Larger mosaic grid (4x4 instead of 8x8 for more visible tiles)
+                ctx.strokeStyle = '#1976D2';
+                ctx.lineWidth = 8;
+                const tiles = 4;
+                const step = 512 / tiles;
+
+                for (let i = 0; i <= tiles; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * step, 0); ctx.lineTo(i * step, 512);
+                    ctx.moveTo(0, i * step); ctx.lineTo(512, i * step);
+                    ctx.stroke();
+                }
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                return texture;
+            }
+
+            createGridOverlay(w, h) {
+                // Create a wireframe grid showing 1m x 1m cells
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 2;
+
+                // Draw grid lines every 1m (in texture space, this is 512/max(w,h) pixels)
+                const cellsX = Math.floor(w);
+                const cellsY = Math.floor(h);
+                const stepX = 512 / cellsX;
+                const stepY = 512 / cellsY;
+
+                for (let i = 0; i <= cellsX; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * stepX, 0);
+                    ctx.lineTo(i * stepX, 512);
+                    ctx.stroke();
+                }
+                for (let i = 0; i <= cellsY; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * stepY);
+                    ctx.lineTo(512, i * stepY);
+                    ctx.stroke();
+                }
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                return texture;
+            }
+
+            createTileOverlay(parentMesh, w, h) {
+                console.log('🎨 Creating tile overlay for:', parentMesh.userData.name, 'Size:', w, 'x', h);
+
+                // Store dimensions on mesh for later use
+                parentMesh.w = w;
+                parentMesh.h = h;
+
+                // Initialize Set to track placed tiles
+                parentMesh.placedTiles = new Set();
+
+                // Create a grid overlay that will show all placed tiles
+                const gridGeo = new THREE.PlaneGeometry(w, h);
+                const gridMat = new THREE.MeshBasicMaterial({
+                    map: this.createTileTexture(),
+                    transparent: true,
+                    opacity: 0.8,
+                    side: THREE.FrontSide
+                });
+                gridMat.map.repeat.set(1, 1);
+
+                const gridOverlay = new THREE.Mesh(gridGeo, gridMat);
+                gridOverlay.position.z = -0.03;
+                gridOverlay.renderOrder = 10;
+                parentMesh.add(gridOverlay);
+
+                // Create container for individual tiles
+                const tilesGroup = new THREE.Group();
+
+                // Different walls need different Z directions due to rotation
+                const wallName = parentMesh.userData.name;
+                if (wallName === 'bottom') {
+                    tilesGroup.position.z = 0.05; // POSITIVE for floor (rotated -90°)
+                    console.log('  → Floor: using +Z');
+                } else if (wallName.includes('longWall')) {
+                    tilesGroup.position.z = 0.05; // POSITIVE for long walls
+                    console.log('  → Long wall: using +Z for interior');
+                } else {
+                    tilesGroup.position.z = 0.05; // POSITIVE for short walls (after rotation flip)
+                    console.log('  → Short wall: using +Z for interior');
+                }
+
+                parentMesh.add(tilesGroup);
+
+                // CRITICAL: Store references on parent mesh
+                parentMesh.tilesGroup = tilesGroup;
+                parentMesh.tileOverlay = gridOverlay;
+
+                console.log('✅ Tile overlay created. tilesGroup:', tilesGroup, 'tileOverlay:', gridOverlay);
+            }
+
+            animateTiling(targetMesh, hit) {
+                if (!targetMesh.placedTiles) {
+                    targetMesh.placedTiles = new Set();
+                    if (!targetMesh.userData.tiled) targetMesh.userData.tiled = 0;
+                }
+
+                // Get dimensions with fallback to geometry parameters
+                let w = targetMesh.w;
+                let h = targetMesh.h;
+
+                // Fallback if w/h not set (for backwards compatibility)
+                if (!w || !h) {
+                    const params = targetMesh.geometry.parameters;
+                    w = params.width;
+                    h = params.height;
+                    // Cache for future use
+                    targetMesh.w = w;
+                    targetMesh.h = h;
+                }
+
+                const localPoint = targetMesh.worldToLocal(hit.point.clone());
+
+                // Calculate grid based on centered PlaneGeometry [-w/2...w/2]
+                const gridX = Math.floor(localPoint.x + w / 2);
+                const gridY = Math.floor(localPoint.y + h / 2);
+
+                if (gridX < 0 || gridX > Math.ceil(w) - 1 || gridY < 0 || gridY > Math.ceil(h) - 1) {
+                    return;
+                }
+
+                const cellKey = `${gridX},${gridY}`;
+                if (targetMesh.placedTiles.has(cellKey)) return;
+
+                // Clipping Logic: Intersect Grid Cell with Mesh Bounds
+                // Grid Cell (gridX, gridY) range in local coords:
+                // X: [gridX - w/2, gridX - w/2 + 1]
+                // Y: [gridY - h/2, gridY - h/2 + 1]
+                const cellMinX = gridX - w / 2;
+                const cellMaxX = gridX - w / 2 + 1;
+                const cellMinY = gridY - h / 2;
+                const cellMaxY = gridY - h / 2 + 1;
+
+                // Mesh Bounds: [-w/2, w/2] and [-h/2, h/2]
+                const actualMinX = Math.max(cellMinX, -w / 2);
+                const actualMaxX = Math.min(cellMaxX, w / 2);
+                const actualMinY = Math.max(cellMinY, -h / 2);
+                const actualMaxY = Math.min(cellMaxY, h / 2);
+
+                const tileW = actualMaxX - actualMinX;
+                const tileH = actualMaxY - actualMinY;
+
+                if (tileW < 0.001 || tileH < 0.001) return;
+
+                const centerX = (actualMinX + actualMaxX) / 2;
+                const centerY = (actualMinY + actualMaxY) / 2;
+
+                console.log(`Placed clipped tile ${cellKey}: ${tileW.toFixed(2)}x${tileH.toFixed(2)}`);
+
+                // Create Tile
+                const tileGeo = new THREE.PlaneGeometry(tileW, tileH);
+
+                // Adjust UVs to prevent texture squashing (Crop texture instead)
+                const uStart = actualMinX - cellMinX;
+                const uEnd = actualMaxX - cellMinX;
+                const vStart = actualMinY - cellMinY;
+                const vEnd = actualMaxY - cellMinY;
+
+                const uvAttribute = tileGeo.attributes.uv;
+                for (let i = 0; i < uvAttribute.count; i++) {
+                    const u = uvAttribute.getX(i);
+                    const v = uvAttribute.getY(i);
+                    // Map 0..1 to fraction of cell
+                    uvAttribute.setXY(i, uStart + u * (uEnd - uStart), vStart + v * (vEnd - vStart));
+                }
+                tileGeo.attributes.uv.needsUpdate = true;
+
+                // Create or reuse texture
+                if (!this.sharedTileTexture) {
+                    this.sharedTileTexture = this.createTileTexture();
+                }
+
+                const tileMat = new THREE.MeshStandardMaterial({
+                    map: this.sharedTileTexture,
+                    side: THREE.DoubleSide,
+                    roughness: 0.7,
+                    metalness: 0.1
+                });
+
+                const tile = new THREE.Mesh(tileGeo, tileMat);
+                tile.position.set(centerX, centerY, 0.02);
+
+                tile.scale.set(0, 0, 1);
+                gsap.to(tile.scale, { x: 1, y: 1, duration: 0.2, ease: "back.out(1.2)" });
+
+                if (!targetMesh.tilesGroup) {
+                    targetMesh.tilesGroup = new THREE.Group();
+                    targetMesh.add(targetMesh.tilesGroup);
+                }
+                targetMesh.tilesGroup.add(tile);
+                targetMesh.placedTiles.add(cellKey);
+
+                // Update Stats (accumulate area)
+                const area = tileW * tileH;
+                targetMesh.userData.tiled += area;
+                this.updateAreaStat(targetMesh.userData.name, targetMesh.userData.tiled);
+            }
+
+            createPool() {
+                this.poolGroup = new THREE.Group();
+                // Pool rim at ground level (y=0), floor below
+                this.scene.add(this.poolGroup);
+
+                const { length, width, depth } = this.poolDims;
+                const tileTex = this.createTileTexture();
+                const wallMat = new THREE.MeshStandardMaterial({
+                    map: tileTex,
+                    side: THREE.FrontSide // Only show inside
+                });
+                // Fix: DoubleSide for concrete to ensure it blocks view from behind
+                const concreteMat = new THREE.MeshStandardMaterial({ color: 0x999999, side: THREE.DoubleSide });
+
+                // 1. Bottom Floor
+                // We use a Group for the Floor to allow potential hinge logic if needed, but floor is static center.
+                // Actually, let's pivot everything relative to the floor.
+
+                const floorGeo = new THREE.PlaneGeometry(length, width);
+                this.floor = new THREE.Mesh(floorGeo, wallMat.clone());
+                this.floor.w = length; this.floor.h = width;
+                this.floor.rotation.x = -Math.PI / 2;
+                this.floor.position.y = -depth; // Below ground
+                this.floor.userData = { name: "bottom", area: length * width, tiled: 0 };
+                // Adjust texture repeat
+                this.floor.material.map = tileTex.clone();
+                this.floor.material.map.repeat.set(length, width);
+
+                // To animate "filling", we can use a mask or scale another plane on top.
+                // Simpler: Use a secondary mesh slightly above for the "Tiled" state, initially invisible/scaled 0.
+                this.createTileOverlay(this.floor, length, width);
+
+                this.poolGroup.add(this.floor);
+
+
+                // Helper to create Walls with Hinge
+                const createWall = (w, h, x, z, rotY, name) => {
+                    const pivot = new THREE.Group();
+                    pivot.position.set(x, 0, z); // Hinge position on floor edge
+
+                    const meshGeo = new THREE.PlaneGeometry(w, h);
+                    const mesh = new THREE.Mesh(meshGeo, wallMat.clone());
+                    // Walls extend downward from ground level (y=0)
+                    mesh.position.y = -h / 2;
+                    mesh.userData = { name: name, area: w * h, tiled: 0 };
+                    mesh.w = w; mesh.h = h;
+
+                    // Texture repeat
+                    mesh.material.map = tileTex.clone();
+                    mesh.material.map.repeat.set(w, h);
+
+                    this.createTileOverlay(mesh, w, h);
+
+                    // Add concrete back-face
+                    const backGeo = new THREE.PlaneGeometry(w, h);
+                    const back = new THREE.Mesh(backGeo, concreteMat);
+                    back.rotation.y = Math.PI; // Face outwards
+                    back.position.y = -h / 2; // Match wall position
+                    // Move OUTWARD to create thicker concrete layer covering gap
+                    back.position.z = 0.0;
+
+                    // Allow interaction on back face too
+                    back.userData = { name: name, sibling: mesh };
+
+                    pivot.add(mesh);
+                    pivot.add(back);
+                    pivot.rotation.y = rotY; // Rotate pivot to correct side
+
+                    this.poolGroup.add(pivot);
+                    return { pivot, mesh };
+                };
+
+                // Walls are positioned relative to center 0,0
+                // Long Wall 1 (Back)
+                this.wallBack = createWall(length, depth, 0, -width / 2, 0, "longWall1");
+
+                // Long Wall 2 (Front)
+                this.wallFront = createWall(length, depth, 0, width / 2, Math.PI, "longWall2");
+
+                // Short Wall 1 (Left) - Flip rotation to face inward
+                this.wallLeft = createWall(width, depth, -length / 2, 0, Math.PI / 2, "shortWall1");
+
+                // Short Wall 2 (Right) - Flip rotation to face inward
+                this.wallRight = createWall(width, depth, length / 2, 0, -Math.PI / 2, "shortWall2");
+
+                // Add decorative rim/coping around pool edge
+                this.createPoolRim(length, width);
+
+                // Set initial materials to "Concrete" (untiled)
+                // We want to start with EMPTY concrete, then "Tile" it.
+                // So the base material should be Concrete, and the Overlay is the Tile.
+                // Let's swap my logic above.
+
+                [this.floor, this.wallBack.mesh, this.wallFront.mesh, this.wallLeft.mesh, this.wallRight.mesh].forEach(m => {
+                    m.material.map = null;
+                    m.material.color.setHex(0xaaaaaa); // Concrete color
+                });
+            }
+
+            createTileOverlay(parentMesh, w, h) {
+                const geo = new THREE.PlaneGeometry(w, h);
+                const mat = new THREE.MeshBasicMaterial({
+                    map: this.createTileTexture(),
+                    transparent: true,
+                    opacity: 1,
+                    side: THREE.FrontSide
+                });
+                mat.map.repeat.set(w, h);
+
+                const overlay = new THREE.Mesh(geo, mat);
+                // CRITICAL FIX: Use negative Z to place tiles on INSIDE of walls
+                overlay.position.z = -0.02;
+
+                // Scale animation setup
+                overlay.scale.set(0, 1, 1);
+                overlay.position.x = -w / 2;
+                geo.translate(w / 2, 0, 0);
+                overlay.position.x = -w / 2;
+                overlay.scale.set(0, 1, 1);
+
+                parentMesh.add(overlay);
+                parentMesh.tileOverlay = overlay;
+                parentMesh.w = w;
+                parentMesh.h = h;
+            }
+
+            showFormula() {
+                const modal = document.getElementById('formulaModal');
+                if (modal) modal.style.display = 'block';
+                // Show dimensions visually to help explanation
+                this.toggleDimensions(true);
+            }
+
+            reset() {
+                console.log('🔄 Resetting pool tiles');
+
+                const targets = [this.floor, this.wallBack.mesh, this.wallFront.mesh, this.wallLeft.mesh, this.wallRight.mesh];
+                targets.forEach(t => {
+                    // Clear all placed tiles
+                    if (t.tilesGroup) {
+                        while (t.tilesGroup.children.length > 0) {
+                            t.tilesGroup.remove(t.tilesGroup.children[0]);
+                        }
+                    }
+                    if (t.placedTiles) {
+                        t.placedTiles.clear();
+                    }
+                    t.userData.tiled = 0;
+                });
+
+                this.tiledAreas = { bottom: 0, longWall1: 0, longWall2: 0, shortWall1: 0, shortWall2: 0 };
+                this.updateStats();
+            }
+
+            setupInteraction() {
+                console.log('🎮 Setting up click-based tile placement');
+
+                let placementMode = false;
+                const tileBtn = document.getElementById('tile-btn');
+                const modeIndicator = document.getElementById('mode-indicator');
+
+                // Toggle placement mode
+                tileBtn.addEventListener('click', () => {
+                    placementMode = !placementMode;
+                    if (placementMode) {
+                        tileBtn.style.background = 'linear-gradient(135deg, #4CAF50, #388E3C)';
+                        tileBtn.style.transform = 'scale(1.1)';
+                        modeIndicator.style.display = 'block';
+                        document.body.style.cursor = 'crosshair';
+                        // HIDE WATER when placing tiles
+                        if (this.waterSurface) {
+                            gsap.to(this.waterSurface.position, {
+                                y: -1.5, // Lower water below pool floor
+                                duration: 0.8,
+                                ease: 'power2.inOut'
+                            });
+                            gsap.to(this.waterSurface.material, {
+                                opacity: 0,
+                                duration: 0.8
+                            });
+                        }
+                        console.log('✅ Placement mode ACTIVATED - Water draining...');
+                    } else {
+                        tileBtn.style.background = 'linear-gradient(135deg, #2196F3, #1976D2)';
+                        tileBtn.style.transform = 'scale(1)';
+                        modeIndicator.style.display = 'none';
+                        document.body.style.cursor = 'default';
+                        // RESTORE WATER when done
+                        if (this.waterSurface) {
+                            gsap.to(this.waterSurface.position, {
+                                y: -1.0,
+                                duration: 0.8,
+                                ease: 'power2.inOut'
+                            });
+                            gsap.to(this.waterSurface.material, {
+                                opacity: 0.6,
+                                duration: 0.8
+                            });
+                        }
+                        console.log('❌ Placement mode DEACTIVATED - Water filling...');
+                    }
+                });
+
+                // Click on canvas to place tile
+                this.renderer.domElement.addEventListener('click', (e) => {
+                    if (!placementMode) {
+                        // If NOT in placement mode, check if clicked on pool to toggle dimensions
+                        const rect = this.renderer.domElement.getBoundingClientRect();
+                        this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                        this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+                        const intersects = this.raycaster.intersectObjects(this.poolGroup.children, true);
+
+                        if (intersects.length > 0) {
+                            // Clicked on something in the pool group
+                            console.log('👆 Clicked on pool - toggling dimensions');
+                            this.toggleDimensions();
+                        } else {
+                            console.log('⚠️ Not in placement mode, click ignored');
+                        }
+                        return;
+                    }
+
+                    const rect = this.renderer.domElement.getBoundingClientRect();
+                    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    console.log('🖱️ CLICK at mouse coords:', this.mouse.x.toFixed(2), this.mouse.y.toFixed(2));
+
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    const intersects = this.raycaster.intersectObjects(this.poolGroup.children, true);
+
+                    console.log('📊 Intersections found:', intersects.length);
+
+                    if (intersects.length === 0) {
+                        console.warn('⚠️ No intersections - clicked outside pool');
+                        return;
+                    }
+
+                    for (let i = 0; i < intersects.length; i++) {
+                        const hit = intersects[i];
+                        console.log(`  [${i}] ${hit.object.type} name="${hit.object.userData.name || 'none'}" dist=${hit.distance.toFixed(2)}`);
+
+                        if (hit.object.userData.name) {
+                            console.log('✅ Valid target found:', hit.object.userData.name);
+                            this.animateTiling(hit.object, hit);
+                            break;
+                        }
+                    }
+                });
+
+                // Hover effect
+                this.renderer.domElement.addEventListener('mousemove', (e) => {
+                    if (!placementMode) return;
+
+                    const rect = this.renderer.domElement.getBoundingClientRect();
+                    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    const intersects = this.raycaster.intersectObjects(this.poolGroup.children, true);
+
+                    // Reset all highlights
+                    this.poolGroup.traverse(child => {
+                        if (child.isMesh && child.material && child.material.emissive) {
+                            child.material.emissive.setHex(0x000000);
+                        }
+                    });
+
+                    // Highlight hovered surface
+                    for (let hit of intersects) {
+                        if (hit.object.userData.name && hit.object.material && hit.object.material.emissive) {
+                            hit.object.material.emissive.setHex(0x444444);
+                            break;
+                        }
+                    }
+                });
+
+                // Auto-Tile button
+                document.getElementById('auto-tile-btn').addEventListener('click', () => {
+                    console.log('⚡ AUTO-TILE clicked!');
+                    this.autoTileAll();
+                });
+
+
+            }
+
+            autoTileAll() {
+                console.log('🤖 Starting auto-tile for all surfaces...');
+
+                const surfaces = [
+                    this.floor,
+                    this.wallBack.mesh,
+                    this.wallFront.mesh,
+                    this.wallLeft.mesh,
+                    this.wallRight.mesh
+                ];
+
+                let totalTilesPlaced = 0;
+                let delay = 0;
+                const tileDelay = 50; // ms between tiles
+
+                surfaces.forEach(surface => {
+                    const w = surface.w;
+                    const h = surface.h;
+                    const name = surface.userData.name;
+
+                    console.log(`  📋 Tiling ${name} (${w}x${h})`);
+
+                    // Use Math.ceil to include fractional grid cells (e.g., 1.4m height = 2 rows)
+                    const gridW = Math.ceil(w);
+                    const gridH = Math.ceil(h);
+
+                    for (let x = 0; x < gridW; x++) {
+                        for (let y = 0; y < gridH; y++) {
+                            const cellKey = `${x},${y}`;
+
+                            // Ensure placedTiles exists
+                            if (!surface.placedTiles) {
+                                surface.placedTiles = new Set();
+                            }
+
+                            // Skip if already placed
+                            if (surface.placedTiles.has(cellKey)) {
+                                continue;
+                            }
+
+                            // Schedule tile placement with delay for animation effect
+                            setTimeout(() => {
+                                // Create fake intersection for this grid cell
+                                const localX = x - w / 2 + 0.5;
+                                const localY = y - h / 2 + 0.5;
+
+                                // Create mock intersection point in local space
+                                const localPoint = new THREE.Vector3(localX, localY, 0);
+                                const worldPoint = surface.localToWorld(localPoint);
+
+                                const fakeIntersection = {
+                                    point: worldPoint,
+                                    object: surface
+                                };
+
+                                this.animateTiling(surface, fakeIntersection);
+                            }, delay);
+
+                            delay += tileDelay;
+                            totalTilesPlaced++;
+                        }
+                    }
+                });
+
+                console.log(`✅ Scheduled ${totalTilesPlaced} tiles for placement`);
+            }
+
+            toggleDimensions(forceVisible = null) {
+                if (this.dimensionsGroup) {
+                    if (forceVisible !== null) {
+                        this.dimensionsGroup.visible = forceVisible;
+                    } else {
+                        this.dimensionsGroup.visible = !this.dimensionsGroup.visible;
+                    }
+                    console.log('📏 Dimensions visibility:', this.dimensionsGroup.visible);
+                    return;
+                }
+
+                if (forceVisible === false) return; // Don't create if hidden
+
+                console.log('📏 Creating dimensions...');
+                this.dimensionsGroup = new THREE.Group();
+                this.scene.add(this.dimensionsGroup);
+
+                // Use colors matching the formula
+                const colorLength = 0x4CAF50; // Green (S_day)
+                const colorWidth = 0x4CAF50; // Green (S_day)
+                const colorDepth = 0xFFC107; // Yellow/Amber (Height)
+
+                // 1. Length (25m) - Along X axis
+                this.createDimensionLine(
+                    new THREE.Vector3(-12.5, 0.1, -5.0),
+                    new THREE.Vector3(12.5, 0.1, -5.0),
+                    "25m",
+                    new THREE.Vector3(0, 0.5, -6.0),
+                    colorLength
+                );
+
+                // 2. Width (8m) - Along Z axis
+                this.createDimensionLine(
+                    new THREE.Vector3(13.5, 0.1, -4),
+                    new THREE.Vector3(13.5, 0.1, 4),
+                    "8m",
+                    new THREE.Vector3(14.5, 0.5, 0),
+                    colorWidth
+                );
+
+                // 3. Depth (1.4m) - Vertical
+                this.createDimensionLine(
+                    new THREE.Vector3(12.5, 0, 4.5),
+                    new THREE.Vector3(12.5, -1.4, 4.5),
+                    "1.4m",
+                    new THREE.Vector3(13.5, -0.7, 4.5),
+                    colorDepth
+                );
+            }
+
+            createDimensionLine(start, end, labelText, labelPos, colorCode = 0x000000) {
+                // Determine hex string for canvas styles
+                const hexColor = '#' + new THREE.Color(colorCode).getHexString();
+
+                // Main line
+                const material = new THREE.LineBasicMaterial({ color: colorCode, linewidth: 3 });
+                const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+                const line = new THREE.Line(geometry, material);
+                this.dimensionsGroup.add(line);
+
+                // Arrows (cones)
+                const dir = new THREE.Vector3().subVectors(end, start).normalize();
+
+                // Use same color for arrows
+                const arrowMat = new THREE.MeshBasicMaterial({ color: colorCode });
+                const coneGeo = new THREE.ConeGeometry(0.12, 0.4, 8);
+
+                const arrowHead1 = new THREE.Mesh(coneGeo, arrowMat);
+                arrowHead1.position.copy(end);
+                arrowHead1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                // Move back slightly so tip is at end. Height is 0.4 -> center at 0.2. Tip at 0.4.
+                arrowHead1.translateY(-0.2);
+                this.dimensionsGroup.add(arrowHead1);
+
+                const arrowHead2 = new THREE.Mesh(coneGeo, arrowMat);
+                arrowHead2.position.copy(start);
+                arrowHead2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().negate());
+                arrowHead2.translateY(-0.2);
+                this.dimensionsGroup.add(arrowHead2);
+
+                // Label
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+
+                // Background for text (rounded rect with border)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.beginPath();
+                // Simple rounded rect manual path since roundRect support varies
+                const x = 10, y = 10, w = 236, h = 108, r = 20;
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
+                ctx.fill();
+
+                // Border color matches dimension color
+                ctx.strokeStyle = hexColor;
+                ctx.lineWidth = 6;
+                ctx.stroke();
+
+                // Text
+                ctx.font = 'bold 60px Arial';
+                ctx.fillStyle = hexColor; // Text color matches dimension color
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labelText, 128, 64);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const labelMat = new THREE.SpriteMaterial({ map: texture });
+                const label = new THREE.Sprite(labelMat);
+                label.position.copy(labelPos);
+                label.scale.set(2, 1, 1);
+                this.dimensionsGroup.add(label);
+            }
+
+            updateAreaStat(name, area) {
+                if (name === 'bottom') {
+                    document.getElementById('areaBottom').textContent = Math.round(area);
+                    this.tiledAreas.bottom = area;
+                } else {
+                    // Combine walls for side area
+                    if (name.includes('longWall1')) this.tiledAreas.longWall1 = area;
+                    if (name.includes('longWall2')) this.tiledAreas.longWall2 = area;
+                    if (name.includes('shortWall1')) this.tiledAreas.shortWall1 = area;
+                    if (name.includes('shortWall2')) this.tiledAreas.shortWall2 = area;
+
+                    const totalSide = this.tiledAreas.longWall1 + this.tiledAreas.longWall2 +
+                        this.tiledAreas.shortWall1 + this.tiledAreas.shortWall2;
+                    document.getElementById('areaSide').textContent = Math.round(totalSide);
+                }
+                this.updateStats();
+            }
+
+            updateStats() {
+                const total = this.tiledAreas.bottom +
+                    this.tiledAreas.longWall1 + this.tiledAreas.longWall2 +
+                    this.tiledAreas.shortWall1 + this.tiledAreas.shortWall2;
+                document.getElementById('areaTotal').textContent = Math.round(total * 10) / 10;
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.animateWater(); // Animate water waves
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        window.onload = () => {
+            window.app = new SwimmingPoolApp();
+        };
+    </script>
+</body>
+
+</html>

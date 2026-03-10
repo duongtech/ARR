@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Toán Học: Robot Khám Phá Thể Tích Khối Lập Phương</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1208 0%, #211a0a 50%, #0f1208 100%);
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ── Info Panel ── */
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 10, 5, 0.90);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 22px;
+            color: white;
+            min-width: 290px;
+            max-width: 310px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        .info-panel h1 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #64B5F6;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .problem-statement {
+            background: rgba(100, 181, 246, 0.1);
+            border: 1px solid rgba(100, 181, 246, 0.25);
+            padding: 11px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #cfe8ff;
+        }
+
+        /* Progress */
+        .progress-section {
+            background: linear-gradient(135deg, #1565C0, #0D47A1);
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        .progress-label {
+            font-size: 12px;
+            opacity: 0.85;
+            margin-bottom: 4px;
+        }
+
+        .progress-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .progress-sub {
+            font-size: 11px;
+            opacity: 0.75;
+            margin-top: 4px;
+        }
+
+        .progress-bar-wrap {
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            overflow: hidden;
+            height: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64B5F6, #E3F2FD);
+            border-radius: 20px;
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+
+        /* Status */
+        .status-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 12px;
+            margin-bottom: 14px;
+            width: 100%;
+            text-align: center;
+            color: #90CAF9;
+            border: 1px solid rgba(144, 202, 249, 0.3);
+            transition: all 0.3s;
+        }
+
+        /* Buttons */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 11px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #43A047, #2E7D32);
+            color: #fff;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #FB8C00, #E65100);
+            color: #fff;
+        }
+
+        .btn-auto {
+            background: linear-gradient(135deg, #1E88E5, #1565C0);
+            color: #fff;
+        }
+
+        .btn-door {
+            background: linear-gradient(135deg, #8E24AA, #6A1B9A);
+            color: #fff;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #e53935, #b71c1c);
+            color: #fff;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-row .btn {
+            flex: 1;
+        }
+
+        /* Formula Modal */
+        .formula-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.85);
+            background: rgba(10, 8, 4, 0.97);
+            backdrop-filter: blur(20px);
+            border: 2px solid #64B5F6;
+            border-radius: 22px;
+            padding: 36px 42px;
+            color: white;
+            text-align: center;
+            z-index: 200;
+            max-width: 440px;
+            width: 90%;
+            box-shadow: 0 0 60px rgba(100, 181, 246, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .formula-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .formula-modal h2 {
+            font-size: 26px;
+            color: #64B5F6;
+            margin-bottom: 20px;
+        }
+
+        .formula-box {
+            font-size: 42px;
+            font-weight: 700;
+            color: #FFD54F;
+            background: rgba(255, 213, 79, 0.1);
+            border: 2px solid rgba(255, 213, 79, 0.4);
+            border-radius: 14px;
+            padding: 18px 30px;
+            margin: 18px 0;
+            letter-spacing: 2px;
+        }
+
+        .formula-modal p {
+            color: #B0BEC5;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .formula-modal .close-btn {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #1E88E5, #1565C0);
+            color: white;
+            border: none;
+            padding: 12px 36px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(30, 136, 229, 0.4);
+        }
+
+        .formula-modal .close-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 136, 229, 0.5);
+        }
+
+        /* Instructions */
+        .instructions {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(10, 10, 30, 0.8);
+            backdrop-filter: blur(10px);
+            color: #B0BEC5;
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 12px;
+            max-width: 220px;
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            line-height: 1.8;
+        }
+
+        /* Layer indicator */
+        .layer-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(10, 14, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: white;
+            font-size: 13px;
+            z-index: 10;
+            min-width: 160px;
+        }
+
+        .layer-indicator h3 {
+            color: #64B5F6;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .layer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 12px;
+            color: #90A4AE;
+        }
+
+        .layer-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .layer-dot.active {
+            border-color: #64B5F6;
+            background: #64B5F6;
+        }
+
+        .layer-dot.done {
+            border-color: #4CAF50;
+            background: #4CAF50;
+        }
+
+        /* ── Robot Speech Bubble ── */
+        #robotBubble {
+            position: fixed;
+            background: rgba(10, 20, 40, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid #00E5FF;
+            border-radius: 16px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 16px;
+            max-width: 220px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 200;
+            opacity: 0;
+            transform: translateY(8px) scale(0.9);
+            transition: opacity 0.2s, transform 0.2s;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+        }
+
+        #robotBubble.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        #robotBubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: #00E5FF;
+            border-bottom: 0;
+        }
+
+        #interactHint {
+            position: fixed;
+            bottom: 70px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 0.9;
+            }
+        }
+    </style>
+</head>
+
+
+<body>
+    <!-- Info Panel -->
+    <div class="info-panel">
+        <h1>🤖 Robot &amp; Khối Lập Phương</h1>
+
+        <div class="problem-statement">
+            <strong>Bài toán:</strong> Khối lập phương cạnh <b>3</b> đơn vị chứa được bao nhiêu khối đơn vị?<br>
+            <span style="color:#90CAF9">Robot sẽ nhảy vào khám phá và ghép từng khối nhỏ!</span>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-label">Số khối đã ghép</div>
+            <div class="progress-value"><span id="counter">0</span><span style="font-size:20px;opacity:0.7">/27</span>
+            </div>
+            <div class="progress-sub">khối đơn vị</div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+        </div>
+
+        <div class="status-badge" id="statusBadge">🏠 Sẵn sàng — nhấn Bắt Đầu</div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="btnStart" onclick="app.startScene()">▶ Bắt Đầu (Robot Nhảy Vào)</button>
+            <button class="btn btn-add" id="btnAdd" onclick="app.addOneUnit()" disabled>➕ Ghép 1 Khối Đơn Vị</button>
+            <button class="btn btn-auto" id="btnAuto" onclick="app.autoFill()" disabled>⚡ Tự Động Ghép Hết</button>
+            <button class="btn btn-reset" onclick="app.reset()">🔄 Đặt Lại</button>
+        </div>
+    </div>
+
+    <!-- Layer indicator -->
+    <div class="layer-indicator">
+        <h3>📐 Lớp Ghép</h3>
+        <div class="layer-row"><span><span class="layer-dot" id="dot1"></span>Lớp 1 (đáy)</span><span
+                id="lbl1">0/9</span></div>
+        <div class="layer-row"><span><span class="layer-dot" id="dot2"></span>Lớp 2 (giữa)</span><span
+                id="lbl2">0/9</span></div>
+        <div class="layer-row"><span><span class="layer-dot" id="dot3"></span>Lớp 3 (trên)</span><span
+                id="lbl3">0/9</span></div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+        🖱️ <strong>Kéo chuột:</strong> Xoay mô hình<br>
+        🔍 <strong>Cuộn chuột:</strong> Zoom<br>
+        🖱️ <strong>Chuột phải:</strong> Pan<br>
+        🤖 <strong>Nhấn nút:</strong> Điều khiển robot
+    </div>
+
+    <!-- Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Robot Speech Bubble -->
+    <div id="robotBubble"></div>
+    <!-- Interact hint -->
+    <div id="interactHint">👆 Click vào robot để nói chuyện!</div>
+    <script>
+        class CubeRobotApp {
+            constructor() {
+                // Config
+                this.BIG_CUBE_SIZE = 3;
+                this.UNIT_SIZE = 0.93;
+                this.MAX_UNITS = 27;
+
+                // State
+                this.state = 'IDLE';
+                this.unitCount = 0;
+                this.unitMeshes = [];
+                this.doorOpen = false;
+                this.doorAnimating = false;
+                this.autoTimer = null;
+                this.robotAnimFrame = null;
+                this.clickCount = 0;
+                this.bubbleTimer = null;
+                this.isWaving = false;
+
+                // Robot animation
+                this.robotTargetPos = new THREE.Vector3();
+                this.robotAnimating = false;
+
+                // Raycaster
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.hoveredRobot = false;
+
+                this.init();
+                this.createGround();
+                this.createBigCube();
+                this.createRobot();
+                this.setupLights();
+                this.setupInteraction();
+                this.animate();
+
+                window.addEventListener('resize', () => this.onResize());
+            }
+
+
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x1a1208);
+                this.scene.fog = new THREE.FogExp2(0x1a1208, 0.035);
+
+                this.camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 200);
+                this.camera.position.set(7, 5, 9);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(innerWidth, innerHeight);
+                this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.minDistance = 3;
+                this.controls.maxDistance = 25;
+                this.controls.target.set(0, 1.5, 0);
+                this.controls.autoRotate = true;
+                this.controls.autoRotateSpeed = 0.6;   // vòng/phút — nhẹ nhàng
+                this.controls.update();
+
+                // Pause auto-orbit when user interacts, resume after 3s idle
+                this._idleTimer = null;
+                const pauseOrbit = () => {
+                    this.controls.autoRotate = false;
+                    clearTimeout(this._idleTimer);
+                    this._idleTimer = setTimeout(() => {
+                        this.controls.autoRotate = true;
+                    }, 3000);
+                };
+                this.renderer.domElement.addEventListener('pointerdown', pauseOrbit);
+                this.renderer.domElement.addEventListener('wheel', pauseOrbit);
+            }
+
+            setupLights() {
+                const ambient = new THREE.AmbientLight(0x8896b3, 0.7);
+                this.scene.add(ambient);
+
+                const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+                dir.position.set(8, 12, 8);
+                dir.castShadow = true;
+                dir.shadow.mapSize.set(2048, 2048);
+                dir.shadow.camera.near = 0.5;
+                dir.shadow.camera.far = 60;
+                dir.shadow.camera.left = dir.shadow.camera.bottom = -10;
+                dir.shadow.camera.right = dir.shadow.camera.top = 10;
+                this.scene.add(dir);
+
+                const fill = new THREE.DirectionalLight(0x4466bb, 0.4);
+                fill.position.set(-5, 3, -5);
+                this.scene.add(fill);
+
+                const point = new THREE.PointLight(0x64B5F6, 0.6, 12);
+                point.position.set(0, 6, 0);
+                this.scene.add(point);
+                this.interiorLight = point;
+                this.interiorLight.visible = false;
+            }
+
+            // ─────────────────────────────────────────────
+            // ROBOT + CUBE INTERACTION (hover / drag / click)
+            // ─────────────────────────────────────────────
+            setupInteraction() {
+                this.bubble = document.getElementById('robotBubble');
+                this.hintEl = document.getElementById('interactHint');
+
+                // Robot meshes
+                this.robotMeshes = [];
+                this.robotGroup.traverse(obj => { if (obj.isMesh) this.robotMeshes.push(obj); });
+
+                // Drag state
+                this.hoveredCube = null;
+                this.dragMesh = null;
+                this.dragOrigPos = null;
+                this.dragPlane = new THREE.Plane();
+                this.dragOffset = new THREE.Vector3();
+                this._pendingDrag = null;
+                this._ptDown = null;
+                this._isDragging = false;
+
+                const resolveUnit = (obj) => {
+                    while (obj && !this.unitMeshes.includes(obj)) obj = obj.parent;
+                    return obj && this.unitMeshes.includes(obj) ? obj : null;
+                };
+
+                const canvas = this.renderer.domElement;
+
+                canvas.addEventListener('pointerdown', (e) => {
+                    if (e.button !== 0) return;
+                    this.mouse.x = (e.clientX / innerWidth) * 2 - 1;
+                    this.mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                    const rHits = this.raycaster.intersectObjects(this.robotMeshes);
+                    if (rHits.length > 0) { this._ptDown = { x: e.clientX, y: e.clientY, isRobot: true }; return; }
+
+                    if (this.unitMeshes.length > 0) {
+                        const hits = this.raycaster.intersectObjects(this.unitMeshes, true);
+                        if (hits.length > 0) {
+                            const m = resolveUnit(hits[0].object);
+                            if (m) {
+                                this._ptDown = { x: e.clientX, y: e.clientY, isRobot: false };
+                                this._pendingDrag = { mesh: m, hit: hits[0].point.clone() };
+                            }
+                        }
+                    }
+                });
+
+                // ── POINTER MOVE ── drag or hover
+                canvas.addEventListener('pointermove', (e) => {
+                    // Commit drag after 6px movement
+                    if (!this._isDragging && this._pendingDrag && this._ptDown) {
+                        const dx = e.clientX - this._ptDown.x, dy = e.clientY - this._ptDown.y;
+                        if (Math.sqrt(dx * dx + dy * dy) > 6) {
+                            this._startDrag(this._pendingDrag.mesh, this._pendingDrag.hit);
+                            this._pendingDrag = null;
+                        }
+                    }
+
+                    if (this._isDragging && this.dragMesh) {
+                        this.mouse.x = (e.clientX / innerWidth) * 2 - 1;
+                        this.mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+                        const target = new THREE.Vector3();
+                        this.raycaster.ray.intersectPlane(this.dragPlane, target);
+                        if (target) {
+                            const local = this.unitsGroup.worldToLocal(target.clone().add(this.dragOffset));
+                            this.dragMesh.position.set(local.x, Math.max(local.y, -0.8), local.z);
+                        }
+                        document.body.style.cursor = 'grabbing';
+                        return;
+                    }
+
+                    // Hover
+                    this.mouse.x = (e.clientX / innerWidth) * 2 - 1;
+                    this.mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                    const robotHits = this.raycaster.intersectObjects(this.robotMeshes);
+                    const onRobot = robotHits.length > 0;
+                    if (onRobot !== this.hoveredRobot) {
+                        this.hoveredRobot = onRobot;
+                        this.robotGroup.traverse(obj => {
+                            if (obj.isMesh && obj.material) {
+                                const base = obj.material._baseEmissiveInt ?? obj.material.emissiveIntensity;
+                                if (!obj.material._baseEmissiveInt) obj.material._baseEmissiveInt = base;
+                                obj.material.emissiveIntensity = onRobot ? Math.min(base * 2.2, 2.0) : base;
+                            }
+                        });
+                    }
+
+                    const rawHits = !onRobot && this.unitMeshes.length > 0
+                        ? this.raycaster.intersectObjects(this.unitMeshes, true) : [];
+                    const hitCube = rawHits.length > 0 ? resolveUnit(rawHits[0].object) : null;
+
+                    if (this.hoveredCube && this.hoveredCube !== hitCube) {
+                        const m = this.hoveredCube.material;
+                        if (m && m._savedEmissive !== undefined) { m.emissive.setHex(m._savedEmissive); m.emissiveIntensity = m._savedEmissiveInt; }
+                        this.hoveredCube = null;
+                    }
+                    if (hitCube && hitCube !== this.hoveredCube) {
+                        this.hoveredCube = hitCube;
+                        const m = hitCube.material;
+                        if (m && m._savedEmissive === undefined) { m._savedEmissive = m.emissive.getHex(); m._savedEmissiveInt = m.emissiveIntensity; }
+                        m.emissive.setHex(0xffffff); m.emissiveIntensity = 0.55;
+                    }
+
+                    document.body.style.cursor = (onRobot || hitCube) ? 'pointer' : 'default';
+                    if (this.bubble && this.bubble.classList.contains('show') && this.robotHead) this._updateBubblePos();
+                });
+
+                // ── POINTER UP ── end drag or fire click
+                canvas.addEventListener('pointerup', (e) => {
+                    if (this._isDragging) { this._endDrag(); this._ptDown = null; this._pendingDrag = null; return; }
+                    if (this._ptDown) {
+                        const dx = e.clientX - this._ptDown.x, dy = e.clientY - this._ptDown.y;
+                        if (Math.sqrt(dx * dx + dy * dy) < 6) {
+                            this.mouse.x = (e.clientX / innerWidth) * 2 - 1;
+                            this.mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+                            if (this._ptDown.isRobot) { this.onRobotClick(); if (this.hintEl) this.hintEl.style.display = 'none'; }
+                            else if (this._pendingDrag) {
+                                const idx2 = this.unitMeshes.indexOf(this._pendingDrag.mesh);
+                                if (idx2 >= 0) this.onCubeClick(this._pendingDrag.mesh, idx2);
+                            }
+                        }
+                        this._ptDown = null; this._pendingDrag = null;
+                    }
+                });
+
+                canvas.addEventListener('pointerleave', () => { if (this._isDragging) this._endDrag(); });
+
+                // Double-click on displaced cube → snap back to grid
+                canvas.addEventListener('dblclick', (e) => {
+                    this.mouse.x = (e.clientX / innerWidth) * 2 - 1;
+                    this.mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    if (this.unitMeshes.length > 0) {
+                        const hits = this.raycaster.intersectObjects(this.unitMeshes, true);
+                        if (hits.length > 0) {
+                            const mesh = resolveUnit(hits[0].object);
+                            if (mesh && mesh._displaced) this._snapCubeBack(mesh);
+                        }
+                    }
+                });
+            }
+
+
+            _startDrag(mesh, hitPoint) {
+                this._isDragging = true;
+                this.dragMesh = mesh;
+                this.dragOrigPos = mesh.position.clone();
+                mesh.position.y += 0.5;  // lift
+
+                // Horizontal drag plane at cube world height
+                const wp = new THREE.Vector3();
+                mesh.getWorldPosition(wp);
+                this.dragPlane.set(new THREE.Vector3(0, 1, 0), -wp.y);
+                // Offset so cube center follows cursor
+                this.dragOffset.subVectors(wp, hitPoint); this.dragOffset.y = 0;
+
+                this.controls.enabled = false;
+                if (mesh.material) { mesh.material.emissive.setHex(0x00e5ff); mesh.material.emissiveIntensity = 0.8; }
+                document.body.style.cursor = 'grabbing';
+                this.showBubble('Đang kéo khối! 🖐️', 1200);
+            }
+
+            _endDrag() {
+                if (!this.dragMesh) return;
+                this._isDragging = false;
+                this.controls.enabled = true;
+                const mesh = this.dragMesh;
+
+                // Restore emissive to normal (no snap back — cube stays where dropped)
+                if (mesh.material && mesh.material._savedEmissive !== undefined) {
+                    mesh.material.emissive.setHex(mesh.material._savedEmissive);
+                    mesh.material.emissiveIntensity = mesh.material._savedEmissiveInt;
+                }
+
+                // Mark cube as "displaced" so we know it can be snapped back
+                mesh._displaced = true;
+                mesh._origPos = this.dragOrigPos.clone();
+
+                this.dragMesh = null;
+                document.body.style.cursor = 'default';
+                this.showBubble('Thả ra! Double-click để đặt lại 🔄', 2000);
+            }
+
+            // Snap cube back to its original grid position (called on double-click)
+            _snapCubeBack(mesh) {
+                // Use authoritative grid position (not _origPos which can be offset by bounce/drag-lift)
+                const target = mesh._gridPos || mesh._origPos;
+                if (!target) return;
+
+                // Stop any ongoing bounce animation by flagging
+                mesh._snapping = true;
+
+                const to = target.clone();
+                const t0 = Date.now(), dur = 450;
+                const snap = () => {
+                    const p = Math.min((Date.now() - t0) / dur, 1);
+                    const e = 1 - Math.pow(1 - p, 3);
+                    mesh.position.lerp(to, e);
+                    mesh.rotation.y *= (1 - e * 0.1);  // also straighten rotation
+                    if (p < 1) requestAnimationFrame(snap);
+                    else {
+                        mesh.position.copy(to);
+                        mesh.rotation.y = 0;
+                        mesh._displaced = false;
+                        mesh._snapping = false;
+                        this.showBubble('Đặt lại vị trí! 📐', 1400);
+                    }
+                };
+                requestAnimationFrame(snap);
+            }
+
+
+
+            // ── CLICK ON UNIT CUBE ──
+            onCubeClick(mesh, idx) {
+                const pos = this.unitPositions[idx];
+                const layerName = ['Lớp đáy (L1)', 'Lớp giữa (L2)', 'Lớp trên (L3)'][pos.y + 1];
+                const infos = [
+                    `Khối #${idx + 1} — ${layerName} 📦`,
+                    `Vị trí (${pos.x + 2}, ${pos.y + 2}, ${pos.z + 2}) trong lưới 📐`,
+                    `Thể tích 1 khối = 1 đơn vị³ ✨`,
+                    `${idx + 1}/${this.MAX_UNITS} khối đã ghép! 🔧`
+                ];
+                const text = infos[Math.floor(Math.random() * infos.length)];
+
+                // Bounce + spin animation
+                const origY = mesh.position.y;
+                const t0 = Date.now(), dur = 400;
+                const bounce = () => {
+                    const p = Math.min((Date.now() - t0) / dur, 1);
+                    mesh.position.y = origY + Math.sin(p * Math.PI) * 0.28;
+                    mesh.rotation.y += 0.1;
+                    if (p < 1) requestAnimationFrame(bounce);
+                    else { mesh.position.y = origY; }
+                };
+                requestAnimationFrame(bounce);
+
+                // Emissive flash
+                const m = mesh.material;
+                const prevHex = m.emissive.getHex();
+                const prevInt = m.emissiveIntensity;
+                m.emissive.setHex(0xffffff);
+                m.emissiveIntensity = 1.0;
+                setTimeout(() => { m.emissive.setHex(prevHex); m.emissiveIntensity = prevInt; }, 320);
+
+                // Robot reacts: left arm up briefly
+                if (this.armL) {
+                    this.armL.rotation.z = 0.75;
+                    setTimeout(() => { if (this.armL) this.armL.rotation.z = 0; }, 450);
+                }
+
+                this._showCubeBubble(mesh, text);
+            }
+
+            _showCubeBubble(mesh, text) {
+                if (!this.bubble) return;
+                clearTimeout(this.bubbleTimer);
+                this.bubble.textContent = text;
+                const wp = new THREE.Vector3();
+                mesh.getWorldPosition(wp);
+                wp.y += 0.9;
+                const proj = wp.clone().project(this.camera);
+                const sx = (proj.x * 0.5 + 0.5) * innerWidth;
+                const sy = (-(proj.y * 0.5) + 0.5) * innerHeight;
+                this.bubble.style.left = `${Math.min(Math.max(sx - 110, 10), innerWidth - 240)}px`;
+                this.bubble.style.top = `${Math.max(sy - this.bubble.offsetHeight - 16, 10)}px`;
+                this.bubble.classList.add('show');
+                this.bubbleTimer = setTimeout(() => this.bubble.classList.remove('show'), 2200);
+            }
+
+
+
+            _updateBubblePos() {
+                // Project robotHead world pos to screen
+                const headWorld = new THREE.Vector3();
+                this.robotHead.getWorldPosition(headWorld);
+                headWorld.y += 0.5; // above head
+                const proj = headWorld.clone().project(this.camera);
+                const sx = (proj.x * 0.5 + 0.5) * innerWidth;
+                const sy = (-(proj.y * 0.5) + 0.5) * innerHeight;
+                this.bubble.style.left = `${Math.min(sx - this.bubble.offsetWidth / 2, innerWidth - 240)}px`;
+                this.bubble.style.top = `${sy - this.bubble.offsetHeight - 16}px`;
+            }
+
+            onRobotClick() {
+                if (this.isWaving) return;
+                this.clickCount++;
+                const c = this.clickCount;
+
+                // Pick reaction based on click count (cycle every 5)
+                const mode = ((c - 1) % 5);
+
+                if (mode === 0) { this._waveReact(); }
+                else if (mode === 1) { this._jumpReact(); }
+                else if (mode === 2) { this._spinReact(); }
+                else if (mode === 3) { this._nodReact(); }
+                else { this._shakeReact(); }
+            }
+
+            _waveReact() {
+                this.isWaving = true;
+                const msgs = {
+                    IDLE: ['Xin chào! Nhấn Bắt Đầu nào! 😊', 'Tôi đã sẵn sàng khám phá! 🚀', 'Cùng nhau học toán thôi! 📐'],
+                    RUNNING: ['Tôi đang chạy đây! 💨', 'Chờ tôi một chút! 🏃'],
+                    INSIDE: ['Ôi, bên trong rộng quá! 😮', 'Không gian trống hoàn toàn! 🌌'],
+                    ASSEMBLING: ['Đang ghép thêm nè! 🔧', `Còn ${27 - this.unitCount} khối nữa thôi! ⚡`, 'Cứ nhấn đi, tôi sẽ ghép! 🤖'],
+                    DONE: ['Xong rồi! 27 khối! 🎉', 'V = 3×3×3 = 27 đơn vị³! 📐', 'Tuyệt vời! Làm lại nào? 🔄']
+                };
+                const arr = msgs[this.state] || msgs.IDLE;
+                const text = arr[Math.floor(Math.random() * arr.length)];
+
+                // Raise arm
+                if (this.armR) {
+                    this.armR.rotation.z = -1.2;
+                    setTimeout(() => { if (this.armR) this.armR.rotation.z = 0; }, 700);
+                }
+                this.showBubble(text, 2800);
+                setTimeout(() => { this.isWaving = false; }, 800);
+            }
+
+            _jumpReact() {
+                this.isWaving = true;
+                const from = this.robotGroup.position.y;
+                const peakY = from + 0.6;
+                const t0 = Date.now(), dur = 500;
+                const j = () => {
+                    const p = Math.min((Date.now() - t0) / dur, 1);
+                    this.robotGroup.position.y = from + Math.sin(p * Math.PI) * 0.6;
+                    if (p < 1) requestAnimationFrame(j);
+                    else { this.robotGroup.position.y = from; this.isWaving = false; }
+                };
+                requestAnimationFrame(j);
+                this.showBubble('Wheeeee! 🎈', 1500);
+            }
+
+            _spinReact() {
+                this.isWaving = true;
+                let f = 0;
+                const s = () => {
+                    this.robotGroup.rotation.y += 0.18;
+                    f++;
+                    if (f < 35) requestAnimationFrame(s);
+                    else this.isWaving = false;
+                };
+                requestAnimationFrame(s);
+                this.showBubble('Woohoo! 🌀', 2000);
+            }
+
+            _nodReact() {
+                this.isWaving = true;
+                let f = 0;
+                const n = () => {
+                    this.robotHead.rotation.x = Math.sin(f * 0.4) * 0.3;
+                    f++;
+                    if (f < 30) requestAnimationFrame(n);
+                    else { this.robotHead.rotation.x = 0; this.isWaving = false; }
+                };
+                requestAnimationFrame(n);
+                this.showBubble('Gật đầu đồng ý! 👍', 2000);
+            }
+
+            _shakeReact() {
+                this.isWaving = true;
+                let f = 0;
+                const sh = () => {
+                    this.robotHead.rotation.y = Math.sin(f * 0.6) * 0.4;
+                    f++;
+                    if (f < 30) requestAnimationFrame(sh);
+                    else { this.robotHead.rotation.y = 0; this.isWaving = false; }
+                };
+                requestAnimationFrame(sh);
+                this.showBubble('Hmm, thú vị đấy! 🤔', 2000);
+            }
+
+            showBubble(text, duration = 2500) {
+                if (!this.bubble) return;
+                clearTimeout(this.bubbleTimer);
+                this.bubble.textContent = text;
+                this._updateBubblePos();
+                this.bubble.classList.add('show');
+                this.bubbleTimer = setTimeout(() => {
+                    this.bubble.classList.remove('show');
+                }, duration);
+            }
+
+
+
+            createGround() {
+                // Grid floor
+                const gridHelper = new THREE.GridHelper(30, 30, 0x3a2e18, 0x2a2010);
+                this.scene.add(gridHelper);
+
+                const geo = new THREE.PlaneGeometry(40, 40);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0x110e06,
+                    roughness: 0.95,
+                    metalness: 0.1
+                });
+                const floor = new THREE.Mesh(geo, mat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+            }
+
+            // ─────────────────────────────────────────────
+            // BIG CUBE (3×3×3)
+            // ─────────────────────────────────────────────
+            createBigCube() {
+                this.cubeGroup = new THREE.Group();
+                const S = this.BIG_CUBE_SIZE;
+                const halfS = S / 2;
+
+                // Vật liệu tường (semi-transparent)
+                this.wallMat = new THREE.MeshStandardMaterial({
+                    color: 0x1e88e5,
+                    transparent: true,
+                    opacity: 0.25,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    roughness: 0.3,
+                    metalness: 0.1
+                });
+
+                const th = 0.06; // wall thickness
+
+                // Helper: create one panel
+                const panel = (w, h, d, x, y, z, mat) => {
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+                    m.position.set(x, y, z);
+                    m.receiveShadow = true;
+                    this.cubeGroup.add(m);
+                    return m;
+                };
+
+                // Top, bottom
+                panel(S, th, S, 0, halfS, 0, this.wallMat.clone());
+                panel(S, th, S, 0, -halfS, 0, this.wallMat.clone());
+                // Left, right
+                panel(th, S, S, -halfS, 0, 0, this.wallMat.clone());
+                panel(th, S, S, halfS, 0, 0, this.wallMat.clone());
+                // Back
+                panel(S, S, th, 0, 0, -halfS, this.wallMat.clone());
+
+                // FRONT DOOR (split into 2 halves for opening)
+                this.doorPivotL = new THREE.Group();
+                this.doorPivotR = new THREE.Group();
+                this.doorPivotL.position.set(-halfS, 0, halfS);
+                this.doorPivotR.position.set(halfS, 0, halfS);
+
+                const doorMatL = this.wallMat.clone();
+                const doorMatR = this.wallMat.clone();
+
+                const doorL = new THREE.Mesh(new THREE.BoxGeometry(halfS, S, th), doorMatL);
+                doorL.position.set(halfS / 2, 0, 0);
+                this.doorPivotL.add(doorL);
+
+                const doorR = new THREE.Mesh(new THREE.BoxGeometry(halfS, S, th), doorMatR);
+                doorR.position.set(-halfS / 2, 0, 0);
+                this.doorPivotR.add(doorR);
+
+                this.cubeGroup.add(this.doorPivotL);
+                this.cubeGroup.add(this.doorPivotR);
+
+                // Wireframe edges
+                const edgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(S, S, S));
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0x64B5F6, linewidth: 2 });
+                const wireframe = new THREE.LineSegments(edgesGeo, edgesMat);
+                this.cubeGroup.add(wireframe);
+
+                // Position cube so bottom sits on ground
+                this.cubeGroup.position.set(0, halfS, 0);
+                this.scene.add(this.cubeGroup);
+
+                // Unit cubes container (inside the big cube)
+                this.unitsGroup = new THREE.Group();
+                this.cubeGroup.add(this.unitsGroup);
+
+                // Pre-build unit cube positions (3×3×3)
+                this.unitPositions = [];
+                for (let y = 0; y < 3; y++) {
+                    for (let z = -1; z <= 1; z++) {
+                        for (let x = -1; x <= 1; x++) {
+                            this.unitPositions.push({ x, y: -1 + y, z });
+                        }
+                    }
+                }
+            }
+
+            // ─────────────────────────────────────────────
+            // ROBOT PREMIUM (procedural geometry)
+            // ─────────────────────────────────────────────
+            createRobot() {
+                this.robotGroup = new THREE.Group();
+
+                // Material helpers
+                const mat = (color, emissive = 0x000000, emInt = 0.0, rough = 0.25, metal = 0.75) =>
+                    new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: emInt, roughness: rough, metalness: metal });
+                const glow = (color) =>
+                    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.2, roughness: 0.1, metalness: 0.0 });
+
+                // ── TORSO ──
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.54, 0.32), mat(0x5BC8F5, 0x1a6fa0, 0.25));
+                torso.position.y = 0.27;
+                torso.castShadow = true;
+                this.robotGroup.add(torso);
+
+                // Waist ring
+                const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.07, 16), mat(0x37B7E8, 0x0e5a80, 0.2, 0.3, 0.8));
+                waist.position.y = -0.01;
+                this.robotGroup.add(waist);
+
+                // Chest core glow
+                const coreRing = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.04, 20), glow(0x00E5FF));
+                coreRing.rotation.x = Math.PI / 2;
+                coreRing.position.set(0, 0.30, 0.175);
+                this.robotGroup.add(coreRing);
+
+                const coreInner = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 20), glow(0xffffff));
+                coreInner.rotation.x = Math.PI / 2;
+                coreInner.position.set(0, 0.30, 0.177);
+                this.robotGroup.add(coreInner);
+                this.coreInner = coreInner; // for pulse animation
+
+                // Side vents (left & right chest panels)
+                [-0.18, 0.18].forEach(x => {
+                    const vent = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.04), mat(0x29ABD4, 0x0d7fa0, 0.3));
+                    vent.position.set(x, 0.30, 0.168);
+                    this.robotGroup.add(vent);
+                    // Vent lines
+                    for (let i = -1; i <= 1; i++) {
+                        const line = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.01, 0.02), glow(0x00BFFF));
+                        line.position.set(0, i * 0.04, 0.012);
+                        vent.add(line);
+                    }
+                });
+
+                // ── SHOULDER PADS ──
+                [-0.36, 0.36].forEach(x => {
+                    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.24), mat(0x4DB8EA, 0x1565a0, 0.2));
+                    pad.position.set(x, 0.40, 0);
+                    pad.castShadow = true;
+                    this.robotGroup.add(pad);
+
+                    // Shoulder detail stripe
+                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.22), glow(0x00E5FF));
+                    stripe.position.set(x > 0 ? 0.06 : -0.06, 0, 0);
+                    pad.add(stripe);
+                });
+
+                // ── HEAD / HELMET ──
+                this.robotHead = new THREE.Group();
+
+                // Main helmet box  
+                const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.34, 0.34), mat(0x4DB8EA, 0x1a6fa0, 0.2));
+                helmet.castShadow = true;
+                this.robotHead.add(helmet);
+
+                // Helmet top ridge
+                const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.30), mat(0x29ABD4, 0x0d7fa0, 0.15, 0.2, 0.85));
+                ridge.position.y = 0.20;
+                this.robotHead.add(ridge);
+
+                // Visor (wide glowing bar)
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.09, 0.04), glow(0x00E5FF));
+                visor.position.set(0, 0.04, 0.175);
+                this.robotHead.add(visor);
+                this.visor = visor;
+
+                // Cheek panels
+                [-0.20, 0.20].forEach(x => {
+                    const cheek = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, 0.30), mat(0x37B7E8, 0x105a80, 0.15, 0.2, 0.9));
+                    cheek.position.set(x, 0, 0);
+                    this.robotHead.add(cheek);
+                });
+
+                // Chin guard
+                const chin = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.06, 0.06), mat(0x29ABD4, 0x0d5070, 0.1, 0.3, 0.8));
+                chin.position.set(0, -0.14, 0.15);
+                this.robotHead.add(chin);
+
+                // Antenna
+                const antBase = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 8), mat(0xB0D8F0, 0x5090b0, 0.2));
+                antBase.position.set(0.10, 0.24, 0);
+                const antBall = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 10), glow(0xFF6D00));
+                antBall.position.y = 0.10;
+                antBase.add(antBall);
+                this.robotHead.add(antBase);
+                this.antBall = antBall;
+
+                this.robotHead.position.y = 0.73;
+                this.robotGroup.add(this.robotHead);
+
+                // Neck
+                const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.10, 10), mat(0x37B7E8, 0x0e5070, 0.15, 0.3, 0.8));
+                neck.position.y = 0.565;
+                this.robotGroup.add(neck);
+
+                // ── UPPER ARMS ──
+                const uArmGeo = new THREE.BoxGeometry(0.13, 0.24, 0.13);
+                [-0.36, 0.36].forEach((x, i) => {
+                    const uArm = new THREE.Mesh(uArmGeo, mat(0x4DB8EA, 0x1565a0, 0.2));
+                    uArm.position.set(x, 0.24, 0);
+                    uArm.castShadow = true;
+                    this.robotGroup.add(uArm);
+                    if (i === 0) this.armL = uArm; else this.armR = uArm;
+
+                    // Elbow ring
+                    const elbow = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 12), mat(0x29ABD4, 0x0d7fa0, 0.2, 0.3, 0.85));
+                    elbow.position.set(x, 0.11, 0);
+                    this.robotGroup.add(elbow);
+                });
+
+                // ── FOREARMS ──
+                const fArmGeo = new THREE.BoxGeometry(0.11, 0.20, 0.11);
+                [-0.36, 0.36].forEach(x => {
+                    const fArm = new THREE.Mesh(fArmGeo, mat(0x37B7E8, 0x104060, 0.15, 0.3, 0.7));
+                    fArm.position.set(x, -0.01, 0);
+                    fArm.castShadow = true;
+                    this.robotGroup.add(fArm);
+                });
+
+                // ── HANDS ──
+                const handGeo = new THREE.BoxGeometry(0.12, 0.10, 0.10);
+                [-0.36, 0.36].forEach(x => {
+                    const hand = new THREE.Mesh(handGeo, mat(0xB0D8F0, 0x4090c0, 0.3, 0.2, 0.6));
+                    hand.position.set(x, -0.13, 0);
+                    this.robotGroup.add(hand);
+                    // Finger line details
+                    const fLine = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.008, 0.008), glow(0x00E5FF));
+                    fLine.position.set(0, -0.03, 0.04);
+                    hand.add(fLine);
+                });
+
+                // ── HIPS ──
+                const hipGeo = new THREE.BoxGeometry(0.42, 0.10, 0.26);
+                const hip = new THREE.Mesh(hipGeo, mat(0x29ABD4, 0x0d6090, 0.15, 0.35, 0.8));
+                hip.position.y = -0.10;
+                this.robotGroup.add(hip);
+
+                // ── UPPER LEGS ──
+                const uLegGeo = new THREE.BoxGeometry(0.15, 0.27, 0.15);
+                [-0.14, 0.14].forEach((x, i) => {
+                    const uLeg = new THREE.Mesh(uLegGeo, mat(0x4DB8EA, 0x1060a0, 0.2));
+                    uLeg.position.set(x, -0.30, 0);
+                    uLeg.castShadow = true;
+                    this.robotGroup.add(uLeg);
+                    if (i === 0) this.legL = uLeg; else this.legR = uLeg;
+
+                    // Knee joint
+                    const knee = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 12), mat(0x29ABD4, 0x0d7fa0, 0.2, 0.3, 0.85));
+                    knee.position.set(x, -0.435, 0);
+                    this.robotGroup.add(knee);
+                });
+
+                // ── LOWER LEGS ──
+                [-0.14, 0.14].forEach(x => {
+                    const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.14), mat(0x37B7E8, 0x104060, 0.12, 0.35, 0.7));
+                    lLeg.position.set(x, -0.58, 0);
+                    lLeg.castShadow = true;
+                    this.robotGroup.add(lLeg);
+                });
+
+                // ── FEET ──
+                [-0.14, 0.14].forEach(x => {
+                    // Boot
+                    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.09, 0.26), mat(0x29ABD4, 0x0a4060, 0.1, 0.4, 0.8));
+                    foot.position.set(x, -0.735, 0.04);
+                    foot.castShadow = true;
+                    this.robotGroup.add(foot);
+
+                    // Boot thruster glow
+                    const thruster = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.05, 10), glow(0xFF6D00));
+                    thruster.position.set(0, -0.05, -0.08);
+                    foot.add(thruster);
+                });
+
+                // ── BACK PACK / JETPACK ──
+                const jetpack = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.36, 0.12), mat(0x37B7E8, 0x0d4060, 0.1, 0.35, 0.8));
+                jetpack.position.set(0, 0.22, -0.22);
+                jetpack.castShadow = true;
+                this.robotGroup.add(jetpack);
+                // Twin thrusters
+                [-0.08, 0.08].forEach(x => {
+                    const th = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.10, 12), mat(0x29ABD4, 0x0a5070, 0.15, 0.4, 0.85));
+                    th.position.set(x, -0.10, -0.06);
+                    jetpack.add(th);
+                    const flame = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.08, 10), glow(0xFF6D00));
+                    flame.position.y = -0.09;
+                    th.add(flame);
+                    this.robotGroup.userData['flame_' + x] = flame;
+                });
+
+                // Place robot
+                this.robotGroup.position.set(3.2, 0.78, 2.0);
+                this.scene.add(this.robotGroup);
+                this.robotInitPos = this.robotGroup.position.clone();
+            }
+
+            // ─────────────────────────────────────────────
+            // DOOR
+            // ─────────────────────────────────────────────
+            toggleDoor(open) {
+                if (this.doorAnimating) return;
+                if (open !== undefined) {
+                    if (open === this.doorOpen) return;
+                }
+                this.doorAnimating = true;
+                this.doorOpen = open !== undefined ? open : !this.doorOpen;
+
+                const targetAngle = this.doorOpen ? Math.PI * 0.65 : 0;
+                const startL = this.doorPivotL.rotation.y;
+                const startR = this.doorPivotR.rotation.y;
+                const duration = 700;
+                const start = Date.now();
+
+                const anim = () => {
+                    const t = Math.min((Date.now() - start) / duration, 1);
+                    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                    const leftTarget = this.doorOpen ? Math.PI * 0.65 : 0;
+                    const rightTarget = this.doorOpen ? -Math.PI * 0.65 : 0;
+                    this.doorPivotL.rotation.y = startL + (leftTarget - startL) * e;
+                    this.doorPivotR.rotation.y = startR + (rightTarget - startR) * e;
+                    if (t < 1) requestAnimationFrame(anim);
+                    else this.doorAnimating = false;
+                };
+                requestAnimationFrame(anim);
+            }
+
+            // ─────────────────────────────────────────────
+            // START SCENE: robot runs to cube and enters
+            // ─────────────────────────────────────────────
+            startScene() {
+                if (this.state !== 'IDLE') return;
+                this.state = 'RUNNING';
+                document.getElementById('btnStart').disabled = true;
+                this.setStatus('🏃 Robot đang chạy đến khối lập phương...');
+
+                // Open door first
+                this.toggleDoor(true);
+
+                // Phase 1: run to cube entrance
+                const target1 = new THREE.Vector3(0, 0.38, 1.9);
+                const start1 = this.robotGroup.position.clone();
+                const dur1 = 1800;
+                const t1 = Date.now();
+
+                const phase1 = () => {
+                    const prog = Math.min((Date.now() - t1) / dur1, 1);
+                    const e = prog < 0.5 ? 2 * prog * prog : 1 - Math.pow(-2 * prog + 2, 2) / 2;
+                    this.robotGroup.position.lerpVectors(start1, target1, e);
+                    this.robotGroup.rotation.y = Math.atan2(
+                        target1.x - start1.x, target1.z - start1.z) * e;
+                    if (prog < 1) { requestAnimationFrame(phase1); }
+                    else { setTimeout(() => this.robotJumpInside(), 300); }
+                };
+                requestAnimationFrame(phase1);
+            }
+
+            robotJumpInside() {
+                this.setStatus('🦘 Robot đang nhảy vào khối lập phương...');
+
+                // Jump arc to inside
+                const startPos = this.robotGroup.position.clone();
+                const endPos = new THREE.Vector3(0, 0.78, 0);  // center, corrected height
+                const peakHeight = 1.8;
+                const dur = 900;
+                const t0 = Date.now();
+
+                const jump = () => {
+                    const prog = Math.min((Date.now() - t0) / dur, 1);
+                    const e = prog;
+                    const lerpPos = new THREE.Vector3().lerpVectors(startPos, endPos, e);
+                    lerpPos.y = startPos.y + Math.sin(e * Math.PI) * peakHeight;
+                    this.robotGroup.position.copy(lerpPos);
+                    if (prog < 1) { requestAnimationFrame(jump); }
+                    else {
+                        this.robotInsideArrive();
+                    }
+                };
+                requestAnimationFrame(jump);
+            }
+
+            robotInsideArrive() {
+                this.state = 'INSIDE';
+                this.interiorLight.visible = true;
+
+                // Fade walls more transparent
+                this.cubeGroup.children.forEach(child => {
+                    if (child.material && child.material.transparent) child.material.opacity = 0.10;
+                    if (child instanceof THREE.Group) {
+                        child.children.forEach(c => { if (c.material && c.material.transparent) c.material.opacity = 0.10; });
+                    }
+                });
+
+                // Close door
+                setTimeout(() => this.toggleDoor(false), 400);
+                this.robotGroup.rotation.y = Math.PI;
+                this.setStatus('🚀 Robot đang bay lên để kiểm tra không gian...');
+
+                // Robot floats UP to the top of the interior (above unit cube stack)
+                // Unit cubes stack from world y≈0.5 to y≈3.0
+                // Robot hovers at world y=3.5 (just above cube top at y=3)
+                const fromPos = this.robotGroup.position.clone();
+                const toPos = new THREE.Vector3(0, 1.5, 0);   // tâm bên trong cube
+                const dur = 1000;
+                const t0 = Date.now();
+
+                const riseUp = () => {
+                    const prog = Math.min((Date.now() - t0) / dur, 1);
+                    const e = 1 - Math.pow(1 - prog, 3);
+                    this.robotGroup.position.lerpVectors(fromPos, toPos, e);
+                    if (prog < 1) { requestAnimationFrame(riseUp); }
+                    else {
+                        this.headBobbing = true;
+                        this.setStatus('🏠 Robot đang xem không gian trống — bắt đầu ghép khối!');
+                        document.getElementById('btnAdd').disabled = false;
+                        document.getElementById('btnAuto').disabled = false;
+                    }
+                };
+                setTimeout(() => requestAnimationFrame(riseUp), 300);
+            }
+
+
+            // ─────────────────────────────────────────────
+            // ADD ONE UNIT CUBE
+            // ─────────────────────────────────────────────
+            addOneUnit() {
+                if (this.unitCount >= this.MAX_UNITS) return;
+                if (this.state !== 'INSIDE' && this.state !== 'ASSEMBLING') return;
+                this.state = 'ASSEMBLING';
+
+                const idx = this.unitCount;
+                const pos = this.unitPositions[idx];
+
+                // Unit cube: semi-transparent glass look so robot remains visible
+                const geo = new THREE.BoxGeometry(this.UNIT_SIZE, this.UNIT_SIZE, this.UNIT_SIZE);
+                const hue = (idx / 27) * 80 + 190; // blue-cyan gradient
+                const color = new THREE.Color(`hsl(${hue}, 75%, 58%)`);
+                const mat = new THREE.MeshStandardMaterial({
+                    color,
+                    roughness: 0.15,
+                    metalness: 0.1,
+                    transparent: true,
+                    opacity: 0.58,
+                    depthWrite: false,
+                    side: THREE.DoubleSide
+                });
+                const cube = new THREE.Mesh(geo, mat);
+                cube.renderOrder = 1;  // draw after opaque objects
+
+                // Edges
+                const edgesGeo = new THREE.EdgesGeometry(geo);
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 });
+                const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+                cube.add(edges);
+
+                // Start position: above the big cube (fly-in)
+                cube.position.set(pos.x, 3, pos.z);
+                cube.scale.set(0, 0, 0);
+                cube._gridPos = new THREE.Vector3(pos.x, pos.y, pos.z);  // authoritative grid position
+                this.unitsGroup.add(cube);
+                this.unitMeshes.push(cube);
+
+                // Animate: scale up + fall into position
+                const targetY = pos.y;
+                const startTime = Date.now();
+                const duration = 400;
+
+                const animCube = () => {
+                    const t = Math.min((Date.now() - startTime) / duration, 1);
+                    const e = 1 - Math.pow(1 - t, 3); // ease out cubic
+                    cube.scale.setScalar(e);
+                    cube.position.y = 3 + (targetY - 3) * e;
+                    if (t < 1) requestAnimationFrame(animCube);
+                    else {
+                        cube.position.set(pos.x, targetY, pos.z);
+                        this.playPlaceSound();
+                    }
+                };
+                requestAnimationFrame(animCube);
+
+                // Move robot to "place" position (slight gesture)
+                this.robotPlaceGesture();
+
+                this.unitCount++;
+                this.updateUI();
+
+                if (this.unitCount === this.MAX_UNITS) {
+                    setTimeout(() => this.onComplete(), 600);
+                }
+            }
+
+            robotPlaceGesture() {
+                // Raise arm briefly
+                const origArmL = this.armL.rotation.z;
+                this.armL.rotation.z = -0.6;
+                setTimeout(() => { this.armL.rotation.z = origArmL; }, 350);
+            }
+
+            // ─────────────────────────────────────────────
+            // AUTO FILL
+            // ─────────────────────────────────────────────
+            autoFill() {
+                if (this.unitCount >= this.MAX_UNITS) return;
+                document.getElementById('btnAdd').disabled = true;
+                document.getElementById('btnAuto').disabled = true;
+
+                const addNext = () => {
+                    if (this.unitCount < this.MAX_UNITS) {
+                        this.addOneUnit();
+                        this.autoTimer = setTimeout(addNext, 220);
+                    }
+                };
+                this.autoTimer = setTimeout(addNext, 100);
+            }
+
+            // ─────────────────────────────────────────────
+            // COMPLETE
+            // ─────────────────────────────────────────────
+            onComplete() {
+                this.state = 'DONE';
+                this.setStatus('🎉 Hoàn thành! 27 khối đơn vị đã được ghép!');
+                document.getElementById('btnAdd').disabled = true;
+                document.getElementById('btnAuto').disabled = true;
+
+                // Robot dance (spin)
+                let spins = 0;
+                const spin = () => {
+                    this.robotGroup.rotation.y += 0.12;
+                    spins++;
+                    if (spins < 52) requestAnimationFrame(spin);
+                };
+                requestAnimationFrame(spin);
+            }
+
+            closeFormula() {
+                document.getElementById('formulaModal').classList.remove('show');
+            }
+
+            // ─────────────────────────────────────────────
+            // RESET
+            // ─────────────────────────────────────────────
+            reset() {
+                // Clear auto timer
+                if (this.autoTimer) clearTimeout(this.autoTimer);
+
+                // Remove unit cubes
+                this.unitMeshes.forEach(m => this.unitsGroup.remove(m));
+                this.unitMeshes = [];
+                this.unitCount = 0;
+
+                // Reset door
+                this.doorOpen = true;
+                this.toggleDoor(false);
+
+                // Restore wall opacity
+                this.cubeGroup.children.forEach(child => {
+                    if (child.material && child.material.transparent) {
+                        child.material.opacity = 0.25;
+                    }
+                    if (child instanceof THREE.Group) {
+                        child.children.forEach(c => {
+                            if (c.material && c.material.transparent) {
+                                c.material.opacity = 0.25;
+                            }
+                        });
+                    }
+                });
+
+                // Reset robot
+                this.robotGroup.position.copy(this.robotInitPos);
+                this.robotGroup.rotation.set(0, 0, 0);
+                this.interiorLight.visible = false;
+                this.headBobbing = false;
+
+                // Reset state / UI
+                this.state = 'IDLE';
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnAdd').disabled = true;
+                document.getElementById('btnAuto').disabled = true;
+                document.getElementById('formulaModal').classList.remove('show');
+                this.updateUI();
+                this.setStatus('🏠 Sẵn sàng — nhấn Bắt Đầu');
+            }
+
+            // ─────────────────────────────────────────────
+            // UI HELPERS
+            // ─────────────────────────────────────────────
+            updateUI() {
+                document.getElementById('counter').textContent = this.unitCount;
+                const pct = (this.unitCount / this.MAX_UNITS) * 100;
+                document.getElementById('progressBar').style.width = pct + '%';
+
+                // Layer indicators
+                const l1 = Math.min(this.unitCount, 9);
+                const l2 = Math.max(0, Math.min(this.unitCount - 9, 9));
+                const l3 = Math.max(0, Math.min(this.unitCount - 18, 9));
+                document.getElementById('lbl1').textContent = `${l1}/9`;
+                document.getElementById('lbl2').textContent = `${l2}/9`;
+                document.getElementById('lbl3').textContent = `${l3}/9`;
+
+                const setDot = (id, val) => {
+                    const d = document.getElementById(id);
+                    d.classList.remove('active', 'done');
+                    if (val > 0 && val < 9) d.classList.add('active');
+                    else if (val === 9) d.classList.add('done');
+                };
+                setDot('dot1', l1);
+                setDot('dot2', l2);
+                setDot('dot3', l3);
+            }
+
+            setStatus(msg) {
+                document.getElementById('statusBadge').textContent = msg;
+            }
+
+            // ─────────────────────────────────────────────
+            // SOUND
+            // ─────────────────────────────────────────────
+            playPlaceSound() {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880 + this.unitCount * 10, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.1);
+                } catch (e) { }
+            }
+
+            // ─────────────────────────────────────────────
+            // ANIMATION LOOP
+            // ─────────────────────────────────────────────
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                const t = Date.now() * 0.001;
+
+                // Robot walking animation (leg / arm swing)
+                if (this.state === 'RUNNING') {
+                    this.legL.rotation.x = Math.sin(t * 10) * 0.5;
+                    this.legR.rotation.x = Math.sin(t * 10 + Math.PI) * 0.5;
+                    this.armL.rotation.x = Math.sin(t * 10 + Math.PI) * 0.3;
+                    this.armR.rotation.x = Math.sin(t * 10) * 0.3;
+                } else {
+                    // Idle gentle sway back to zero
+                    this.armL.rotation.x *= 0.9;
+                    this.armR.rotation.x *= 0.9;
+                    this.legL.rotation.x *= 0.9;
+                    this.legR.rotation.x *= 0.9;
+                }
+
+                // Idle bounce (lively jump when doing nothing)
+                if (this.state === 'IDLE') {
+                    // Bouncy jump: parabolic feel using abs(sin)
+                    const jumpCycle = Math.abs(Math.sin(t * 2.5));          // 0→1→0 repeatedly
+                    const jumpY = jumpCycle * jumpCycle * 0.35;             // ease-in curve = springy pop
+                    this.robotGroup.position.y = this.robotInitPos.y + jumpY;
+
+                    // Slightly lean body forward on way up, backward on way down
+                    this.robotGroup.rotation.z = Math.sin(t * 5) * 0.025;
+
+                    // Arm swing with jump rhythm
+                    this.armL.rotation.z = 0.2 + Math.sin(t * 5) * 0.25;
+                    this.armR.rotation.z = -0.2 - Math.sin(t * 5) * 0.25;
+
+                    // Leg tuck slightly when in air
+                    this.legL.rotation.x = Math.sin(t * 5) * 0.15;
+                    this.legR.rotation.x = Math.sin(t * 5 + Math.PI) * 0.15;
+                }
+
+
+                // Head bob when inside
+                if (this.headBobbing) {
+                    this.robotHead.position.y = 0.73 + Math.sin(t * 3) * 0.025;
+                }
+
+                // Head look-around when assembling
+                if (this.state === 'INSIDE' || this.state === 'ASSEMBLING') {
+                    this.robotHead.rotation.y = Math.sin(t * 1.5) * 0.28;
+                }
+
+                // ── PREMIUM GLOW ANIMATIONS ──
+                // Visor brightness pulse
+                if (this.visor) {
+                    this.visor.material.emissiveIntensity = 0.9 + Math.sin(t * 3) * 0.3;
+                }
+
+                // Chest core inner flash
+                if (this.coreInner) {
+                    this.coreInner.material.emissiveIntensity = 0.8 + Math.sin(t * 5) * 0.6;
+                    const s = 0.85 + Math.sin(t * 5) * 0.15;
+                    this.coreInner.scale.setScalar(s);
+                }
+
+                // Antenna ball flicker (orange, faster)
+                if (this.antBall) {
+                    this.antBall.material.emissiveIntensity = 0.7 + Math.abs(Math.sin(t * 7)) * 0.8;
+                }
+
+                // Interior light pulse
+                if (this.interiorLight && this.interiorLight.visible) {
+                    this.interiorLight.intensity = 0.5 + Math.sin(t * 2) * 0.15;
+                }
+
+                // Edges glow on unit cubes
+                this.unitMeshes.forEach((cube, i) => {
+                    cube.rotation.y = Math.sin(t * 0.5 + i * 0.3) * 0.01;
+                });
+
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            onResize() {
+                this.camera.aspect = innerWidth / innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(innerWidth, innerHeight);
+            }
+        }
+
+        // Boot
+        window.app = new CubeRobotApp();
+    </script>
+</body>
+
+</html>

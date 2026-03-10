@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Hình Gấp Khối Lập Phương</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+            color: white;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .ui-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 320px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .ui-panel.hidden {
+            transform: translateX(-120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .ui-panel h2 {
+            margin-bottom: 15px;
+            font-size: 20px;
+            color: #4FC3F7;
+            border-bottom: 2px solid #4FC3F7;
+            padding-bottom: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 18px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #B0BEC5;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            background: linear-gradient(to right, #4FC3F7 0%, #4FC3F7 0%, #37474F 0%, #37474F 100%);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4FC3F7;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(79, 195, 247, 0.5);
+        }
+
+        .value-display {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: #4FC3F7;
+            font-size: 16px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+
+        /* Toggle Buttons */
+        .toggle-buttons {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            display: flex;
+            gap: 10px;
+        }
+
+        .toggle-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(102, 126, 234, 0.9);
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .info-panel.hidden {
+            transform: translateX(120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .info-panel h3 {
+            color: #FFC107;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .info-panel p {
+            margin: 5px 0;
+            font-size: 13px;
+            color: #CFD8DC;
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: #4FC3F7;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            border: 2px solid #4FC3F7;
+        }
+
+        /* Formula Modal - Moved to Right Side */
+        .formula-modal {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            /* Moved to right */
+            left: auto;
+            /* Reset left */
+            transform: translateY(-50%) scale(0.9);
+            /* Vertical center only */
+            background: rgba(20, 20, 20, 0.90);
+            padding: 25px;
+            border-radius: 20px;
+            border: 2px solid #FFC107;
+            box-shadow: 0 0 50px rgba(255, 193, 7, 0.3);
+            max-width: 350px;
+            /* Narrower */
+            width: 90%;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .formula-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(-50%) scale(1);
+        }
+
+        .formula-step {
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .formula-modal.active .formula-step {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .formula-modal.active .formula-step:nth-child(1) {
+            transition-delay: 0.1s;
+        }
+
+        .formula-modal.active .formula-step:nth-child(2) {
+            transition-delay: 0.3s;
+        }
+
+        .formula-modal.active .formula-step:nth-child(3) {
+            transition-delay: 0.5s;
+        }
+
+        .formula-modal.active .formula-step:nth-child(4) {
+            transition-delay: 0.7s;
+        }
+
+        .formula-title {
+            color: #FFC107;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .formula-highlight {
+            font-size: 28px;
+            color: #4CAF50;
+            font-weight: bold;
+            margin: 10px 0;
+            background: rgba(76, 175, 80, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- Toggle Buttons -->
+    <div class="toggle-buttons">
+        <button class="toggle-btn" id="toggleControls" title="Ẩn/Hiện Bảng Điều Khiển">🎛️</button>
+        <button class="toggle-btn" id="toggleInstructions" title="Ẩn/Hiện Hướng Dẫn">💡</button>
+    </div>
+
+    <div class="ui-panel" id="controlPanel">
+        <h2>🎛️ Điều Khiển Khối Hộp</h2>
+
+        <div class="control-group">
+            <label>🔄 Góc Gấp Khối:</label>
+            <div class="slider-container">
+                <input type="range" id="foldSlider" min="0" max="100" value="0" step="1">
+                <span class="value-display" id="foldValue">0%</span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="app.animateFold(0)">MỞ KHỐI (DẠNG TẤM)</button>
+        <button class="btn btn-secondary" onclick="app.animateFold(100)">GẤP LẠI (HÌNH LẬP PHƯƠNG)</button>
+
+        <!-- Unit Cubes Toggle -->
+        <div style="display: flex; gap: 5px; margin-top: 10px;">
+            <button class="btn" id="btnUnitCubes" style="background: #009688; color: white; flex: 2;"
+                onclick="app.toggleUnitCubes()">🧊 Hiển thị Khối Đơn Vị (27)</button>
+            <button class="btn" style="background: #607D8B; color: white; flex: 1;" title="Sắp xếp lại về vị trí cũ"
+                onclick="app.resetCubePositions()">🔄 Xếp Lại</button>
+        </div>
+        <!-- Formula Discovery Button -->
+        <button class="btn" style="background: #FF5722; color: white; margin-top: 8px;" onclick="app.toggleFormula()">📐
+            Rút Ra Công Thức</button>
+
+        <!-- Material Selection -->
+        <div class="control-group" style="border-top: 1px solid #37474F; padding-top: 15px; margin-top: 15px;">
+            <label>🧱 Chọn Chất Liệu (Toàn bộ):</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button class="btn" style="background: #5D4037; color: white; margin:0;"
+                    onclick="app.setFaceMaterial('wood')">🪵 Gỗ</button>
+                <button class="btn" style="background: #795548; color: white; margin:0;"
+                    onclick="app.setFaceMaterial('brick')">🧱 Gạch</button>
+                <button class="btn" style="background: #607D8B; color: white; margin:0;"
+                    onclick="app.setFaceMaterial('stone')">🪨 Đá</button>
+                <button class="btn" style="background: #ECEFF1; color: black; margin:0;"
+                    onclick="app.setFaceMaterial('paper')">📄 Giấy</button>
+                <button class="btn" style="background: #263238; color: white; margin:0; grid-column: span 2;"
+                    onclick="app.setFaceMaterial('none')">❌ Bỏ Chất Liệu</button>
+            </div>
+        </div>
+
+        <div class="control-group" style="border-top: 1px solid #37474F; padding-top: 15px; margin-top: 15px;">
+            <label>🎨 Đổi Màu Mặt Đang Chọn:</label>
+            <div class="color-palette">
+                <!-- Standard Palette -->
+                <button class="color-btn" style="background: #FF9800" onclick="app.setFaceColor('#FF9800')"
+                    title="Cam"></button>
+                <button class="color-btn" style="background: #4CAF50" onclick="app.setFaceColor('#4CAF50')"
+                    title="Xanh lá"></button>
+                <button class="color-btn" style="background: #2196F3" onclick="app.setFaceColor('#2196F3')"
+                    title="Xanh dương"></button>
+                <button class="color-btn" style="background: #FF5252" onclick="app.setFaceColor('#FF5252')"
+                    title="Đỏ"></button>
+                <button class="color-btn" style="background: #9C27B0" onclick="app.setFaceColor('#9C27B0')"
+                    title="Tím"></button>
+                <button class="color-btn" style="background: #00BCD4" onclick="app.setFaceColor('#00BCD4')"
+                    title="Xanh ngọc"></button>
+                <button class="color-btn" style="background: #FFEB3B" onclick="app.setFaceColor('#FFEB3B')"
+                    title="Vàng"></button>
+            </div>
+            <p style="margin-top:8px; font-size:12px; color:#aaa;">*Click vào mặt của khối để chọn trước khi đổi màu</p>
+        </div>
+    </div>
+
+    <div class="info-panel" id="instructionsPanel">
+        <h3>💡 Hướng Dẫn</h3>
+        <p>🖱️ <strong>Click vào khối</strong> để Gấp / Mở</p>
+        <p>🖐️ <strong>Giữ Shift + Kéo</strong> để Gấp / Mở (kéo ngang)</p>
+        <p>🖱️ <strong>Click + Chọn Chất Liệu</strong> để thay đổi bề mặt</p>
+        <p>🖱️ <strong>Chuột Phải</strong>: Xoay màn hình</p>
+        <p>🖱️ <strong>Lăn chuột</strong>: Zoom</p>
+    </div>
+
+    <!-- Formula Overlay -->
+    <div class="formula-modal" id="formulaModal">
+        <button class="close-modal" onclick="app.toggleFormula()">×</button>
+        <h2 class="formula-title">🔍 Khám Phá Công Thức</h2>
+
+        <div class="formula-step">
+            <p>1️⃣ <strong>QUAN SÁT:</strong> Bạn đếm được bao nhiêu khối nhỏ?</p>
+            <p style="color:#4FC3F7; font-size: 20px; font-weight:bold;">👉 27 Khối đơn vị</p>
+        </div>
+
+        <div class="formula-step">
+            <p>2️⃣ <strong>PHÂN TÍCH:</strong> Cạnh của khối lớn dài bằng bao nhiêu cạnh khối nhỏ?</p>
+            <p style="color:#4FC3F7; font-size: 20px; font-weight:bold;">👉 a = 3 đơn vị</p>
+        </div>
+
+        <div class="formula-step">
+            <p>3️⃣ <strong>LIÊN HỆ:</strong> Thử thực hiện phép tính:</p>
+            <p style="color:#FFC107; font-size: 24px; font-weight:bold;">3 × 3 × 3 = 27</p>
+        </div>
+
+        <div class="formula-step">
+            <p>✅ <strong>KẾT LUẬN:</strong> Thể tích hình lập phương cạnh a là:</p>
+            <div class="formula-highlight">V = a × a × a</div>
+            <p style="font-size:14px; color:#aaa;">(Hay viết gọn là V = a³)</p>
+        </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">Sẵn sàng - Kéo thanh trượt để gấp khối</div>
+
+    <!-- GSAP for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+    <!-- Three.js with ES6 Modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        class CubeNetApp {
+            constructor() {
+                this.container = document.getElementById('canvas-container');
+                this.faces = {};
+                this.hinges = {};
+                this.selectedFace = null;
+                this.isFoldingDrag = false;
+                this.textures = {};
+                this.unitCubes = null;
+                this.layer1Cubes = [];
+                this.layer2Cubes = [];
+                this.layer3Cubes = [];
+                this.particles = [];
+
+                // Interaction
+                this.draggedCube = null;
+                this.hoveredCube = null;
+                this.dragPlane = new THREE.Plane();
+                this.dragOffset = new THREE.Vector3();
+                this.intersectPoint = new THREE.Vector3();
+
+                // Colors
+                this.colors = {
+                    top: 0xFF9800,    // Orange
+                    bottom: 0xFF9800, // Orange
+                    left: 0x4CAF50,   // Green
+                    right: 0x4CAF50,  // Green
+                    center: 0x2196F3, // Blue
+                    back: 0x2196F3    // Blue
+                };
+
+                this.initScene();
+                this.initLights();
+                this.initControls();
+                this.initAudio();
+                this.generateTextures(); // Generate textures
+                this.createNet();
+                this.createUnitCubes(); // Create hidden unit cubes
+                this.createParticleSystem(); // Create particles
+                this.initRaycaster();
+                this.setupEventListeners();
+                this.animate();
+
+                window.appInstance = this;
+                console.log('✅ CubeNetApp initialized successfully!');
+            }
+
+            initScene() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x111111);
+
+                // Grid helper
+                const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
+                this.scene.add(gridHelper);
+
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 10, 10);
+                this.camera.lookAt(0, 0, 0);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.container.appendChild(this.renderer.domElement);
+            }
+
+            initLights() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+                dirLight.position.set(10, 20, 10);
+                dirLight.castShadow = true;
+                this.scene.add(dirLight);
+
+                const pointLight = new THREE.PointLight(0xffffff, 0.5);
+                pointLight.position.set(-5, 5, -5);
+                this.scene.add(pointLight);
+            }
+
+            initControls() {
+                this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.minDistance = 2;
+                this.controls.maxDistance = 20;
+            }
+
+            initAudio() {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            playSound(type) {
+                if (!this.audioCtx) this.initAudio();
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioCtx.destination);
+
+                if (type === 'snap') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, this.audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, this.audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(this.audioCtx.currentTime + 0.1);
+                } else if (type === 'fold') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(200, this.audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(this.audioCtx.currentTime + 0.2);
+                }
+            }
+
+            generateTextures() {
+                const size = 512;
+
+                const createCtx = () => {
+                    const c = document.createElement('canvas');
+                    c.width = size;
+                    c.height = size;
+                    return { c, ctx: c.getContext('2d') };
+                };
+
+                // Wood
+                const wood = createCtx();
+                const ctxWood = wood.ctx;
+                ctxWood.fillStyle = '#8D6E63';
+                ctxWood.fillRect(0, 0, size, size);
+                for (let i = 0; i < 50; i++) {
+                    ctxWood.strokeStyle = `rgba(62, 39, 35, ${Math.random() * 0.5})`;
+                    ctxWood.lineWidth = Math.random() * 5 + 1;
+                    ctxWood.beginPath();
+                    const y = Math.random() * size;
+                    ctxWood.moveTo(0, y);
+                    ctxWood.bezierCurveTo(size / 3, y + Math.random() * 50, size * 2 / 3, y - Math.random() * 50, size, y);
+                    ctxWood.stroke();
+                }
+                this.textures['wood'] = new THREE.CanvasTexture(wood.c);
+
+                // Brick
+                const brick = createCtx();
+                const ctxBrick = brick.ctx;
+                ctxBrick.fillStyle = '#A1887F';
+                ctxBrick.fillRect(0, 0, size, size);
+                const rw = size / 4;
+                const rh = size / 8;
+                ctxBrick.fillStyle = '#D7CCC8';
+                for (let y = 0; y < size; y += rh) {
+                    const offset = (y / rh) % 2 === 0 ? 0 : rw / 2;
+                    for (let x = -rw; x < size; x += rw) {
+                        ctxBrick.fillRect(x + offset + 2, y + 2, rw - 4, rh - 4);
+                    }
+                }
+                this.textures['brick'] = new THREE.CanvasTexture(brick.c);
+
+                // Stone
+                const stone = createCtx();
+                const ctxStone = stone.ctx;
+                ctxStone.fillStyle = '#B0BEC5';
+                ctxStone.fillRect(0, 0, size, size);
+                for (let i = 0; i < 100; i++) {
+                    ctxStone.fillStyle = `rgba(69, 90, 100, ${Math.random() * 0.3})`;
+                    ctxStone.beginPath();
+                    ctxStone.arc(Math.random() * size, Math.random() * size, Math.random() * 30 + 10, 0, Math.PI * 2);
+                    ctxStone.fill();
+                }
+                this.textures['stone'] = new THREE.CanvasTexture(stone.c);
+
+                // Paper
+                const paper = createCtx();
+                const ctxPaper = paper.ctx;
+                ctxPaper.fillStyle = '#FAFAFA';
+                ctxPaper.fillRect(0, 0, size, size);
+                for (let i = 0; i < 5000; i++) {
+                    ctxPaper.fillStyle = `rgba(0,0,0,${Math.random() * 0.1})`;
+                    ctxPaper.fillRect(Math.random() * size, Math.random() * size, 2, 2);
+                }
+                this.textures['paper'] = new THREE.CanvasTexture(paper.c);
+            }
+
+            setFaceMaterial(type) {
+                // Apply to ALL faces
+                Object.values(this.faces).forEach(face => {
+                    if (type === 'none') {
+                        face.material.map = null;
+                    } else {
+                        face.material.map = this.textures[type];
+                    }
+                    face.material.needsUpdate = true;
+                });
+
+                this.updateStatus(`Đã áp dụng chất liệu: ${type} cho toàn bộ khối`);
+            }
+
+            createUnitCubes() {
+                this.unitCubes = new THREE.Group();
+                this.layer1Cubes = [];
+                this.layer2Cubes = [];
+                this.layer3Cubes = [];
+
+                const size = 0.96; // Slightly smaller than 1 to show gaps
+                const geometry = new THREE.BoxGeometry(size, size, size);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x90CAF9, // Light Blue
+                    roughness: 0.2,
+                    metalness: 0.1,
+                });
+
+                const edgesGeo = new THREE.EdgesGeometry(geometry);
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0x999999, linewidth: 1 });
+
+                // 3x3x3 Grid
+                // x: -1, 0, 1
+                // y: 0.5, 1.5, 2.5
+                // z: -1, 0, 1
+
+                for (let y = 0; y < 3; y++) {
+                    for (let x = -1; x <= 1; x++) {
+                        for (let z = -1; z <= 1; z++) {
+                            const mesh = new THREE.Mesh(geometry, material);
+                            const posY = 0.5 + y; // 0.5, 1.5, 2.5
+                            mesh.position.set(x, posY, z);
+                            mesh.castShadow = true;
+                            mesh.receiveShadow = true;
+
+                            const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+                            mesh.add(edges);
+
+                            this.unitCubes.add(mesh);
+
+                            if (y === 0) this.layer1Cubes.push(mesh);
+                            else if (y === 1) this.layer2Cubes.push(mesh);
+                            else this.layer3Cubes.push(mesh);
+                        }
+                    }
+                }
+
+                this.unitCubes.visible = false; // Hidden by default
+                this.scene.add(this.unitCubes);
+            }
+
+            createParticleSystem() {
+                const geometry = new THREE.BufferGeometry();
+                const particleCount = 200;
+
+                this.particlePositions = new Float32Array(particleCount * 3);
+                this.particleVelocities = [];
+                this.particleActive = new Array(particleCount).fill(false);
+
+                const colors = [];
+                const colorPalette = [0xFF9800, 0x4CAF50, 0x2196F3, 0xFF5252, 0xFFEB3B];
+
+                for (let i = 0; i < particleCount; i++) {
+                    this.particlePositions[i * 3] = 0;
+                    this.particlePositions[i * 3 + 1] = 0;
+                    this.particlePositions[i * 3 + 2] = 0;
+
+                    this.particleVelocities.push({ x: 0, y: 0, z: 0 });
+
+                    const c = new THREE.Color(colorPalette[Math.floor(Math.random() * colorPalette.length)]);
+                    colors.push(c.r, c.g, c.b);
+                }
+
+                geometry.setAttribute('position', new THREE.BufferAttribute(this.particlePositions, 3));
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                const material = new THREE.PointsMaterial({
+                    size: 0.3,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                this.particleSystem = new THREE.Points(geometry, material);
+                this.particleSystem.visible = false;
+                this.scene.add(this.particleSystem);
+            }
+
+            explodeParticles() {
+                this.particleSystem.visible = true;
+                this.particleSystem.material.opacity = 1;
+
+                for (let i = 0; i < this.particleVelocities.length; i++) {
+                    const speed = Math.random() * 0.5 + 0.2;
+                    const angle = Math.random() * Math.PI * 2;
+                    const theta = Math.random() * Math.PI;
+
+                    this.particlePositions[i * 3] = 0;
+                    this.particlePositions[i * 3 + 1] = 1; // Center Y
+                    this.particlePositions[i * 3 + 2] = 0;
+
+                    this.particleVelocities[i] = {
+                        x: Math.sin(theta) * Math.cos(angle) * speed,
+                        y: Math.cos(theta) * speed,
+                        z: Math.sin(theta) * Math.sin(angle) * speed
+                    };
+
+                    this.particleActive[i] = true;
+                }
+
+                this.particleSystem.geometry.attributes.position.needsUpdate = true;
+
+                // Fade out
+                gsap.to(this.particleSystem.material, {
+                    opacity: 0,
+                    duration: 1.5,
+                    ease: "power2.in",
+                    onComplete: () => {
+                        this.particleSystem.visible = false;
+                    }
+                });
+            }
+
+            updateParticles() {
+                if (!this.particleSystem || !this.particleSystem.visible) return;
+
+                for (let i = 0; i < this.particleVelocities.length; i++) {
+                    if (this.particleActive[i]) {
+                        this.particlePositions[i * 3] += this.particleVelocities[i].x;
+                        this.particlePositions[i * 3 + 1] += this.particleVelocities[i].y;
+                        this.particlePositions[i * 3 + 2] += this.particleVelocities[i].z;
+
+                        // Gravity
+                        this.particleVelocities[i].y -= 0.01;
+
+                        // Floor bounce (simple)
+                        if (this.particlePositions[i * 3 + 1] < 0) {
+                            this.particlePositions[i * 3 + 1] = 0;
+                            this.particleVelocities[i].y *= -0.5;
+                        }
+                    }
+                }
+                this.particleSystem.geometry.attributes.position.needsUpdate = true;
+            }
+
+            toggleUnitCubes() {
+                if (this.unitCubes) {
+                    this.unitCubes.visible = !this.unitCubes.visible;
+                    const btn = document.getElementById('btnUnitCubes');
+                    if (this.unitCubes.visible) {
+                        btn.style.background = '#4DB6AC';
+                        btn.textContent = '🧊 Ẩn Khối Đơn Vị';
+                        // Reset positions and scales
+                        if (this.unitCubes && this.unitCubes.children) {
+                            // Reset positions to grid
+                            let idx = 0;
+                            for (let y = 0; y < 3; y++) {
+                                for (let x = -1; x <= 1; x++) {
+                                    for (let z = -1; z <= 1; z++) {
+                                        if (this.unitCubes.children[idx]) {
+                                            const posY = 0.5 + y;
+                                            gsap.to(this.unitCubes.children[idx].position, {
+                                                x: x, y: posY, z: z, duration: 0.5, ease: "power2.out"
+                                            });
+                                            gsap.to(this.unitCubes.children[idx].rotation, {
+                                                x: 0, y: 0, z: 0, duration: 0.5
+                                            });
+                                            this.unitCubes.children[idx].scale.set(1, 1, 1);
+                                        }
+                                        idx++;
+                                    }
+                                }
+                            }
+                        }
+                        this.updateStatus('Đã hiển thị 27 khối đơn vị (1cm³)');
+                    } else {
+                        btn.style.background = '#009688';
+                        btn.textContent = '🧊 Hiển thị Khối Đơn Vị (27)';
+                        this.updateStatus('Đã ẩn khối đơn vị');
+                    }
+                }
+            }
+
+            toggleFormula() {
+                const modal = document.getElementById('formulaModal');
+                const isOpening = !modal.classList.contains('active');
+
+                // Close if already open
+                if (!isOpening) {
+                    modal.classList.remove('active');
+                    return;
+                }
+
+                modal.classList.add('active');
+                this.animateVolumeBuildUp();
+            }
+
+            resetCubePositions() {
+                if (!this.unitCubes || !this.unitCubes.children) return;
+
+                let idx = 0;
+                for (let y = 0; y < 3; y++) {
+                    for (let x = -1; x <= 1; x++) {
+                        for (let z = -1; z <= 1; z++) {
+                            if (this.unitCubes.children[idx]) {
+                                const posY = 0.5 + y;
+                                gsap.to(this.unitCubes.children[idx].position, {
+                                    x: x, y: posY, z: z, duration: 0.8, ease: "elastic.out(1, 0.5)"
+                                });
+                                gsap.to(this.unitCubes.children[idx].rotation, {
+                                    x: 0, y: 0, z: 0, duration: 0.8
+                                });
+                            }
+                            idx++;
+                        }
+                    }
+                }
+                this.updateStatus('Đã sắp xếp lại các khối');
+                this.playSound('snap');
+            }
+
+            animateVolumeBuildUp() {
+                this.updateStatus('🚀 Đang xây dựng mô hình tính thể tích...');
+
+                // 1. Unfold first
+                this.animateFold(0, 0.8);
+
+                // 2. Hide cubes initially
+                if (!this.unitCubes) this.createUnitCubes();
+                this.unitCubes.visible = true;
+
+                // Force Reset Positions Instantly
+                let idx = 0;
+                for (let y = 0; y < 3; y++) {
+                    for (let x = -1; x <= 1; x++) {
+                        for (let z = -1; z <= 1; z++) {
+                            if (this.unitCubes.children[idx]) {
+                                const posY = 0.5 + y;
+                                this.unitCubes.children[idx].position.set(x, posY, z);
+                                this.unitCubes.children[idx].rotation.set(0, 0, 0);
+                                this.unitCubes.children[idx].scale.set(0, 0, 0);
+                            }
+                            idx++;
+                        }
+                    }
+                }
+
+                const tl = gsap.timeline();
+
+                // Layer 1 (Bottom 9)
+                tl.to(this.layer1Cubes.map(c => c.scale), {
+                    x: 1, y: 1, z: 1,
+                    duration: 0.5,
+                    stagger: 0.05,
+                    ease: "back.out(1.7)",
+                    delay: 0.8 // Wait for unfold
+                });
+
+                // Layer 2 (Middle 9)
+                tl.to(this.layer2Cubes.map(c => c.scale), {
+                    x: 1, y: 1, z: 1,
+                    duration: 0.5,
+                    stagger: 0.05,
+                    ease: "back.out(1.7)"
+                }, "+=0.1");
+
+                // Layer 3 (Top 9)
+                tl.to(this.layer3Cubes.map(c => c.scale), {
+                    x: 1, y: 1, z: 1,
+                    duration: 0.5,
+                    stagger: 0.05,
+                    ease: "back.out(1.7)"
+                }, "+=0.1");
+
+                // 3. Fold back
+                tl.call(() => {
+                    this.animateFold(100, 1.5);
+                    this.updateStatus('✅ Đã hoàn thành mô hình V = a³');
+                }, null, "+=0.5");
+            }
+
+            createNet() {
+                const size = 3;
+                const thickness = 0.1;
+                const geometry = new THREE.BoxGeometry(size, thickness, size);
+                const halfSize = size / 2;
+
+                const createFace = (color, name) => {
+                    const material = new THREE.MeshStandardMaterial({
+                        color: color,
+                        roughness: 0.7,
+                        metalness: 0.1,
+                        side: THREE.DoubleSide
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    mesh.userData = { isFace: true, name: name };
+
+                    const edges = new THREE.EdgesGeometry(geometry);
+                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 }));
+                    mesh.add(line);
+
+                    return mesh;
+                };
+
+                const createHinge = (x, y, z) => {
+                    const hinge = new THREE.Group();
+                    hinge.position.set(x, y, z);
+                    return hinge;
+                };
+
+                // Center (Blue)
+                this.centerFace = createFace(this.colors.center, 'Center');
+                this.centerFace.position.set(0, 0, 0);
+                this.scene.add(this.centerFace);
+                this.faces['Center'] = this.centerFace;
+
+                // Top (Orange)
+                this.hingeTop = createHinge(0, 0, -halfSize);
+                this.centerFace.add(this.hingeTop);
+
+                this.topFace = createFace(this.colors.top, 'Top');
+                this.topFace.position.set(0, 0, -halfSize);
+                this.hingeTop.add(this.topFace);
+                this.faces['Top'] = this.topFace;
+                this.hinges['Top'] = this.hingeTop;
+
+                // Right (Green)
+                this.hingeRight = createHinge(halfSize, 0, 0);
+                this.centerFace.add(this.hingeRight);
+
+                this.rightFace = createFace(this.colors.right, 'Right');
+                this.rightFace.position.set(halfSize, 0, 0);
+                this.hingeRight.add(this.rightFace);
+                this.faces['Right'] = this.rightFace;
+                this.hinges['Right'] = this.hingeRight;
+
+                // Bottom (Orange)
+                this.hingeBottom = createHinge(0, 0, halfSize);
+                this.centerFace.add(this.hingeBottom);
+
+                this.bottomFace = createFace(this.colors.bottom, 'Bottom');
+                this.bottomFace.position.set(0, 0, halfSize);
+                this.hingeBottom.add(this.bottomFace);
+                this.faces['Bottom'] = this.bottomFace;
+                this.hinges['Bottom'] = this.hingeBottom;
+
+                // Left (Green)
+                this.hingeLeft = createHinge(-halfSize, 0, 0);
+                this.centerFace.add(this.hingeLeft);
+
+                this.leftFace = createFace(this.colors.left, 'Left');
+                this.leftFace.position.set(-halfSize, 0, 0);
+                this.hingeLeft.add(this.leftFace);
+                this.faces['Left'] = this.leftFace;
+                this.hinges['Left'] = this.hingeLeft;
+
+                // Back (Blue)
+                this.hingeBack = createHinge(0, 0, size);
+                this.hingeBottom.add(this.hingeBack);
+
+                this.backFace = createFace(this.colors.back, 'Back');
+                this.backFace.position.set(0, 0, halfSize);
+                this.hingeBack.add(this.backFace);
+                this.faces['Back'] = this.backFace;
+                this.hinges['Back'] = this.hingeBack;
+            }
+
+            updateFold(value) {
+                const percent = value / 100;
+                const angle90 = Math.PI / 2;
+
+                this.hinges['Right'].rotation.z = percent * angle90;
+                this.hinges['Left'].rotation.z = -percent * angle90;
+                this.hinges['Top'].rotation.x = percent * angle90;
+                this.hinges['Bottom'].rotation.x = -percent * angle90;
+                this.hinges['Back'].rotation.x = -percent * angle90;
+            }
+
+            animateFold(targetPercent, duration = 1.0) {
+                const slider = document.getElementById('foldSlider');
+                const valDisplay = document.getElementById('foldValue');
+
+                const startObj = { val: parseFloat(slider.value) };
+
+                this.playSound('fold');
+
+                // Bounce effect configuration
+                const easeType = duration > 0.5 ? "elastic.out(1, 0.5)" : "power2.inOut";
+
+                gsap.to(startObj, {
+                    val: targetPercent,
+                    duration: duration,
+                    ease: easeType,
+                    onUpdate: () => {
+                        const v = startObj.val;
+                        slider.value = v;
+                        valDisplay.textContent = Math.round(v) + '%';
+                        this.updateFold(v);
+
+                        document.querySelector('input[type="range"]').style.background =
+                            `linear-gradient(to right, #4FC3F7 0%, #4FC3F7 ${v}%, #37474F ${v}%, #37474F 100%)`;
+                    },
+                    onComplete: () => {
+                        this.playSound('snap');
+                        // Confetti explosion on full open/close
+                        if (targetPercent === 0 || targetPercent === 100) {
+                            this.explodeParticles();
+                        }
+                    }
+                });
+
+                this.updateStatus(targetPercent === 0 ? "👐 Đang mở khối..." : "📦 Đang gấp khối...");
+            }
+
+            setFaceColor(colorHex) {
+                if (this.selectedFace) {
+                    this.selectedFace.material.color.set(colorHex);
+                    gsap.from(this.selectedFace.material.emissive, { r: 1, g: 1, b: 1, duration: 0.5 });
+                    this.updateStatus(`Đã đổi màu mặt ${this.selectedFace.userData.name}`);
+                } else {
+                    this.updateStatus("⚠️ Vui lòng click chọn một mặt trước!");
+                }
+            }
+
+            initRaycaster() {
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+            }
+
+            toggleFold() {
+                const slider = document.getElementById('foldSlider');
+                const val = parseFloat(slider.value);
+                const target = val > 50 ? 0 : 100;
+                this.animateFold(target);
+            }
+
+            setupEventListeners() {
+                const slider = document.getElementById('foldSlider');
+                slider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    document.getElementById('foldValue').textContent = val + '%';
+                    this.updateFold(val);
+                    slider.style.background = `linear-gradient(to right, #4FC3F7 0%, #4FC3F7 ${val}%, #37474F ${val}%, #37474F 100%)`;
+                });
+
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                let isDragging = false;
+                let startX = 0;
+                let startFold = 0;
+
+                this.container.addEventListener('pointerdown', (event) => {
+                    const rect = this.renderer.domElement.getBoundingClientRect();
+                    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                    const currentFold = parseFloat(slider.value);
+
+                    // 1. Check Unit Cubes Selection (Priority) - ONLY IF OPEN
+                    if (this.unitCubes && this.unitCubes.visible && currentFold < 90) {
+                        // Use recursive true to catch edges if clicked
+                        const intersects = this.raycaster.intersectObjects(this.unitCubes.children, true);
+                        if (intersects.length > 0) {
+                            let target = intersects[0].object;
+                            // If we hit the outline/edge, get the parent cube
+                            if (target.type === 'LineSegments' && target.parent) {
+                                target = target.parent;
+                            }
+
+                            this.draggedCube = target;
+                            this.controls.enabled = false;
+
+                            // Setup drag plane facing camera
+                            const normal = new THREE.Vector3();
+                            this.camera.getWorldDirection(normal);
+                            this.dragPlane.setFromNormalAndCoplanarPoint(normal, this.draggedCube.position);
+
+                            if (this.raycaster.ray.intersectPlane(this.dragPlane, this.intersectPoint)) {
+                                this.dragOffset.subVectors(this.draggedCube.position, this.intersectPoint);
+                            }
+
+                            this.updateStatus("✊ Đang di chuyển khối...");
+
+                            // Highlight (Subtle)
+                            this.draggedCube.material.emissive.setHex(0x555555);
+                            this.container.style.cursor = 'grabbing';
+
+                            // Prevent OrbitControls from picking this up
+                            if (event.preventDefault) event.preventDefault();
+
+                            return; // Stop other checks
+                        }
+                    }
+
+                    // 2. Fold Drag
+                    if (event.shiftKey) {
+                        this.isFoldingDrag = true;
+                        isDragging = true;
+                        startX = event.clientX;
+                        startFold = parseFloat(slider.value);
+                        this.controls.enabled = false;
+                        this.updateStatus("↔️ Đang kéo để gấp/mở...");
+                    }
+                    // 3. Face Selection
+                    else {
+                        isDragging = false;
+                        // Raycaster already set above
+                        const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+
+                        if (this.selectedFace) {
+                            this.selectedFace.material.emissive.setHex(0x000000);
+                        }
+                        this.selectedFace = null;
+
+                        const faceIntersect = intersects.find(i => i.object.userData.isFace);
+
+                        if (faceIntersect) {
+                            this.selectedFace = faceIntersect.object;
+                            this.selectedFace.material.emissive.setHex(0x555555);
+                            this.updateStatus(`Đã chọn: Mặt ${this.selectedFace.userData.name}`);
+
+                            this.toggleFold();
+                        }
+                    }
+                });
+
+                window.addEventListener('pointermove', (event) => {
+                    const rect = this.renderer.domElement.getBoundingClientRect();
+                    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    const currentFold = parseFloat(slider.value);
+
+                    // Hover Effect for Unit Cubes - ONLY IF OPEN
+                    if (!this.draggedCube && this.unitCubes && this.unitCubes.visible && currentFold < 90) {
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+                        const intersects = this.raycaster.intersectObjects(this.unitCubes.children, true);
+
+                        let hitObj = null;
+                        if (intersects.length > 0) {
+                            hitObj = intersects[0].object;
+                            if (hitObj.type === 'LineSegments' && hitObj.parent) {
+                                hitObj = hitObj.parent;
+                            }
+                        }
+
+                        if (this.hoveredCube && this.hoveredCube !== hitObj) {
+                            this.hoveredCube.material.emissive.setHex(0x000000);
+                            this.hoveredCube = null;
+                            this.container.style.cursor = 'default';
+                        }
+
+                        if (hitObj) {
+                            this.hoveredCube = hitObj;
+                            this.hoveredCube.material.emissive.setHex(0x333333);
+                            this.container.style.cursor = 'grab';
+                        }
+                    } else if (this.hoveredCube) {
+                        // Clear hover if we folded while hovering
+                        this.hoveredCube.material.emissive.setHex(0x000000);
+                        this.hoveredCube = null;
+                        this.container.style.cursor = 'default';
+                    }
+
+                    // Handle Unit Cube Dragging
+                    if (this.draggedCube) {
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+                        if (this.raycaster.ray.intersectPlane(this.dragPlane, this.intersectPoint)) {
+                            this.draggedCube.position.copy(this.intersectPoint.add(this.dragOffset));
+                        }
+                        return;
+                    }
+
+                    // Handle Fold Dragging
+                    if (this.isFoldingDrag && isDragging) {
+                        const deltaX = event.clientX - startX;
+                        const sensitivity = 0.2;
+                        let newVal = startFold + (deltaX * sensitivity);
+                        newVal = Math.max(0, Math.min(100, newVal));
+
+                        slider.value = newVal;
+                        document.getElementById('foldValue').textContent = Math.round(newVal) + '%';
+                        this.updateFold(newVal);
+                        slider.style.background = `linear-gradient(to right, #4FC3F7 0%, #4FC3F7 ${newVal}%, #37474F ${newVal}%, #37474F 100%)`;
+                    }
+                });
+
+                window.addEventListener('pointerup', () => {
+                    if (this.draggedCube) {
+                        this.updateStatus("Đã thả khối");
+                        this.draggedCube.material.emissive.setHex(0x000000);
+                        this.draggedCube = null;
+                        this.controls.enabled = true;
+                        this.playSound('snap');
+                    }
+
+                    if (this.isFoldingDrag) {
+                        this.isFoldingDrag = false;
+                        isDragging = false;
+                        this.controls.enabled = true;
+                        this.updateStatus("Sẵn sàng");
+                        this.playSound('snap');
+                    }
+                });
+
+                document.getElementById('toggleControls').addEventListener('click', () => {
+                    const panel = document.getElementById('controlPanel');
+                    panel.classList.toggle('hidden');
+                });
+                document.getElementById('toggleInstructions').addEventListener('click', () => {
+                    const panel = document.getElementById('instructionsPanel');
+                    panel.classList.toggle('hidden');
+                });
+            }
+
+            updateStatus(text) {
+                const statusBar = document.getElementById('statusBar');
+                statusBar.textContent = text;
+                clearTimeout(this.statusTimeout);
+                this.statusTimeout = setTimeout(() => {
+                    statusBar.textContent = "Sẵn sàng";
+                }, 3000);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.updateParticles(); // Update particle physics
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        window.onload = () => {
+            new CubeNetApp();
+        };
+
+        window.app = {
+            animateFold: (v) => window.appInstance.animateFold(v),
+            setFaceColor: (c) => window.appInstance.setFaceColor(c),
+            setFaceMaterial: (t) => window.appInstance.setFaceMaterial(t),
+            toggleUnitCubes: () => window.appInstance.toggleUnitCubes(),
+            resetCubePositions: () => window.appInstance.resetCubePositions(),
+            toggleFormula: () => window.appInstance.toggleFormula()
+        };
+    </script>
+</body>
+
+</html>

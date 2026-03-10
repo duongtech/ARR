@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Projects – duongtech</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: #8b949e;
+            margin-bottom: 40px;
+            font-size: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        a.card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 28px 24px;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color .2s, transform .2s, box-shadow .2s;
+        }
+
+        a.card:hover {
+            border-color: #58a6ff;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(88, 166, 255, .15);
+        }
+
+        .card-icon {
+            font-size: 2.4rem;
+            margin-bottom: 14px;
+        }
+
+        .card-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .card-desc {
+            font-size: 0.85rem;
+            color: #8b949e;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔬 AR Projects</h1>
+    <p>duongtech · Các dự án AR & mô phỏng 3D</p>
+    <div class="grid">
+        <a href="AR-NEW10/index.html" class="card">
+            <div class="card-icon">🚛</div>
+            <div class="card-name">AR-NEW10</div>
+            <div class="card-desc">Mô phỏng thùng xe tải 3D – đo kích thước dài, rộng, cao với mũi tên minh hoạ.</div>
+        </a>
+        <a href="AR-NEW9/index.html" class="card">
+            <div class="card-icon">📦</div>
+            <div class="card-name">AR-NEW9</div>
+            <div class="card-desc">Ứng dụng AR mô phỏng thể tích hình hộp chữ nhật và công thức tính.</div>
+        </a>
+        <a href="AR-NEW8/index.html" class="card">
+            <div class="card-icon">🧊</div>
+            <div class="card-name">AR-NEW8</div>
+            <div class="card-desc">Trực quan hoá hình 3D – khám phá các khối hình học tương tác.</div>
+        </a>
+        <a href="AR1/index.html" class="card">
+            <div class="card-icon">⚗️</div>
+            <div class="card-name">AR1 – Volume</div>
+            <div class="card-desc">Tính thể tích hình hộp chữ nhật tương tác – kéo thả thay đổi kích thước thực tế.
+            </div>
+        </a>
+    </div>
+</body>
+
+</html>

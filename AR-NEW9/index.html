@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài Toán Xếp Hộp Lên Xe Tải</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            min-width: 280px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .info-panel h1 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+
+        .problem-statement {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .dimensions {
+            margin-bottom: 15px;
+        }
+
+        .dim-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 13px;
+        }
+
+        .dim-label {
+            color: #aaa;
+        }
+
+        .dim-value {
+            font-weight: 600;
+            color: #4CAF50;
+        }
+
+        /* Stats */
+        .stats {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stats-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stats-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .stats-max {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        /* Buttons */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: white;
+        }
+
+        .btn-auto {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        /* Answer Display */
+        .answer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(76, 175, 80, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            font-size: 28px;
+            font-weight: 700;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            display: none;
+            text-align: center;
+            z-index: 100;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .answer.show {
+            display: block;
+        }
+
+        .answer-subtitle {
+            font-size: 16px;
+            margin-top: 15px;
+            opacity: 0.9;
+        }
+
+        /* Instructions */
+        .instructions {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-size: 12px;
+            max-width: 250px;
+            z-index: 10;
+        }
+
+        .instructions p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Info Panel -->
+    <div class="info-panel">
+        <h1>🚛 Bài Toán Xếp Hộp</h1>
+
+        <div class="problem-statement">
+            <strong>Câu hỏi:</strong> Chú Tư có thể xếp được 64 hộp lên thùng xe hay không?
+        </div>
+
+        <div class="dimensions">
+            <div class="dim-row">
+                <span class="dim-label">Thùng xe (D×R×C):</span>
+                <span class="dim-value">1.2m × 2m × 1.5m</span>
+            </div>
+            <div class="dim-row">
+                <span class="dim-label">Hộp hàng (D×R×C):</span>
+                <span class="dim-value">0.4m × 0.5m × 0.3m</span>
+            </div>
+            <div class="dim-row">
+                <span class="dim-label">Số hộp tối đa:</span>
+                <span class="dim-value">3×4×5 = 60 hộp</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stats-label">Đã xếp được</div>
+            <div class="stats-value"><span id="counter">0</span>/64</div>
+            <div class="stats-max">hộp</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-add" onclick="app.addBox()">➕ Thêm 1 Hộp</button>
+            <button class="btn btn-auto" onclick="app.autoFill()">⚡ Tự Động Xếp 64 Hộp</button>
+            <button class="btn btn-door" onclick="app.toggleDoors()"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🚪 Mở/Đóng Cửa</button>
+            <button class="btn btn-return" onclick="app.returnBoxes()"
+                style="background: linear-gradient(135deg, #FFB75E 0%, #ED8F03 100%);">↩ Trả Hộp</button>
+            <button class="btn btn-reset" onclick="app.reset()">🔄 Đặt Lại</button>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+        <p>🖱️ <strong>Kéo chuột:</strong> Xoay mô hình</p>
+        <p>🔍 <strong>Cuộn chuột:</strong> Phóng to/thu nhỏ</p>
+        <p>� <strong>Click xe:</strong> Hiện/ẩn kích thước</p>
+        <p>�👆 <strong>Nhấn nút:</strong> Xếp hộp</p>
+    </div>
+
+    <!-- Answer Display -->
+    <div class="answer" id="answer">
+        ❌ KHÔNG THỂ xếp được 64 hộp!
+        <div class="answer-subtitle">
+            Thùng xe chỉ chứa tối đa 60 hộp<br>
+            (2 × 5 × 6 = 60 < 64) </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div id="canvas-container"></div>
+
+        <script>
+            class TruckLoadingApp {
+                constructor() {
+                    // Configuration - Match problem statement
+                    this.TRUCK_SIZE = { width: 1.2, height: 1.5, depth: 2 };  // 1.2m × 2m × 1.5m
+                    this.BOX_SIZE = { width: 0.4, height: 0.3, depth: 0.5 };  // Optimal: 3×4×5 packing
+                    this.MAX_BOXES = 64;
+
+                    // Calculate grid (with rounding to avoid floating point errors)
+                    this.GRID = {
+                        x: Math.floor(Math.round(this.TRUCK_SIZE.width / this.BOX_SIZE.width * 100) / 100),
+                        y: Math.floor(Math.round(this.TRUCK_SIZE.height / this.BOX_SIZE.height * 100) / 100),
+                        z: Math.floor(Math.round(this.TRUCK_SIZE.depth / this.BOX_SIZE.depth * 100) / 100)
+                    };
+
+                    console.log('TRUCK_SIZE:', this.TRUCK_SIZE);
+                    console.log('BOX_SIZE:', this.BOX_SIZE);
+                    console.log('Grid calculation:');
+                    console.log('  x (width):', this.TRUCK_SIZE.width, '÷', this.BOX_SIZE.width, '=', this.GRID.x);
+                    console.log('  y (height):', this.TRUCK_SIZE.height, '÷', this.BOX_SIZE.height, '=', this.GRID.y);
+                    console.log('  z (depth):', this.TRUCK_SIZE.depth, '÷', this.BOX_SIZE.depth, '=', this.GRID.z);
+                    console.log('Grid:', this.GRID);
+                    console.log('Max capacity:', this.GRID.x * this.GRID.y * this.GRID.z); // 72
+
+                    // State
+                    this.placedBoxes = [];
+                    this.boxCount = 0;
+
+                    // Initialize
+                    this.init();
+                }
+
+                init() {
+                    console.log('APP INITIALIZING - VERSION 2.0');
+                    // Scene setup
+                    this.scene = new THREE.Scene();
+                    this.scene.background = new THREE.Color(0x87CEEB);
+
+                    // Camera
+                    this.camera = new THREE.PerspectiveCamera(
+                        60,
+                        window.innerWidth / window.innerHeight,
+                        0.1,
+                        1000
+                    );
+                    this.camera.position.set(4, 3, 5);
+
+                    // Renderer
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    this.renderer.shadowMap.enabled = true;
+                    document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+                    // Controls
+                    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                    this.controls.enableDamping = true;
+                    this.controls.dampingFactor = 0.05;
+
+                    // Lights
+                    this.setupLights();
+
+                    // Create truck and ground
+                    this.createTruck();
+                    this.createGround();
+
+                    // Boxes group
+                    this.boxesGroup = new THREE.Group();
+                    this.scene.add(this.boxesGroup);
+
+                    // Animation loop
+                    this.animate();
+
+                    // Handle resize
+                    window.addEventListener('resize', () => this.onResize());
+                }
+
+                setupLights() {
+                    // Ambient light
+                    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+                    this.scene.add(ambient);
+
+                    // Directional light
+                    const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+                    directional.position.set(5, 10, 5);
+                    directional.castShadow = true;
+                    this.scene.add(directional);
+                }
+
+                createTruck() {
+                    // Truck group
+                    this.truckGroup = new THREE.Group();
+                    this.truckGroup.userData = { clickable: true };
+
+                    // === 1. CHASSIS (Khung gầm) ===
+                    const chassisGeometry = new THREE.BoxGeometry(this.TRUCK_SIZE.width + 0.1, 0.15, this.TRUCK_SIZE.depth + 0.1);
+                    const chassisMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+                    const chassis = new THREE.Mesh(chassisGeometry, chassisMaterial);
+                    chassis.position.set(0, 0.3, 0);
+                    chassis.castShadow = true;
+                    this.truckGroup.add(chassis);
+
+                    // === 2. CARGO BED FLOOR (Sàn thùng xe) ===
+                    const floorGeometry = new THREE.BoxGeometry(
+                        this.TRUCK_SIZE.width,
+                        0.08,
+                        this.TRUCK_SIZE.depth
+                    );
+                    const floorMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x8B7355,
+                        roughness: 0.9
+                    });
+                    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                    floor.position.set(0, 0.4, 0);
+                    floor.castShadow = true;
+                    this.truckGroup.add(floor);
+
+                    // === 3. CARGO WALLS (Thành thùng xe) ===
+                    const wallHeight = this.TRUCK_SIZE.height;
+                    const wallThickness = 0.05;
+                    const wallMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x5D8C3E,
+                        roughness: 0.7,
+                        metalness: 0.2,
+                        transparent: true,
+                        opacity: 0.4  // Semi-transparent to see boxes inside
+                    });
+
+                    // Rear Doors (2 cánh cửa sau) - Replace back wall
+                    this.doorsOpen = false;
+                    this.leftDoor = this.createRearDoor('left', wallHeight, wallThickness, wallMaterial);
+                    this.rightDoor = this.createRearDoor('right', wallHeight, wallThickness, wallMaterial);
+                    this.truckGroup.add(this.leftDoor);
+                    this.truckGroup.add(this.rightDoor);
+
+                    // Left wall (Thành trái)
+                    const leftWallGeo = new THREE.BoxGeometry(wallThickness, wallHeight, this.TRUCK_SIZE.depth);
+                    const leftWall = new THREE.Mesh(leftWallGeo, wallMaterial);
+                    leftWall.position.set(-this.TRUCK_SIZE.width / 2, 0.4 + wallHeight / 2, 0);
+                    leftWall.castShadow = true;
+                    this.truckGroup.add(leftWall);
+
+                    // Right wall (Thành phải)
+                    const rightWall = new THREE.Mesh(leftWallGeo, wallMaterial);
+                    rightWall.position.set(this.TRUCK_SIZE.width / 2, 0.4 + wallHeight / 2, 0);
+                    rightWall.castShadow = true;
+                    this.truckGroup.add(rightWall);
+
+                    // Front wall (Thành trước - thấp hơn để nhìn vào trong)
+                    const frontWallGeo = new THREE.BoxGeometry(this.TRUCK_SIZE.width, wallHeight * 0.4, wallThickness);
+                    const frontWall = new THREE.Mesh(frontWallGeo, wallMaterial);
+                    frontWall.position.set(0, 0.4 + wallHeight * 0.2, -this.TRUCK_SIZE.depth / 2);
+                    frontWall.castShadow = true;
+                    this.truckGroup.add(frontWall);
+
+                    // Transparent cargo space (for visualization)
+                    const cargoSpaceGeo = new THREE.BoxGeometry(
+                        this.TRUCK_SIZE.width - 0.1,
+                        wallHeight - 0.1,
+                        this.TRUCK_SIZE.depth - 0.1
+                    );
+                    const cargoSpaceMat = new THREE.MeshStandardMaterial({
+                        color: 0x4CAF50,
+                        transparent: true,
+                        opacity: 0.15,
+                        side: THREE.DoubleSide
+                    });
+                    this.cargoBed = new THREE.Mesh(cargoSpaceGeo, cargoSpaceMat);
+                    this.cargoBed.position.set(0, 0.4 + wallHeight / 2, 0);
+                    this.cargoBed.userData = { clickable: true, name: 'cargo' };
+                    this.truckGroup.add(this.cargoBed);
+
+                    // Cargo space outline
+                    const cargoEdges = new THREE.EdgesGeometry(cargoSpaceGeo);
+                    const cargoLineMat = new THREE.LineBasicMaterial({ color: 0x2E7D32, linewidth: 2 });
+                    const cargoWireframe = new THREE.LineSegments(cargoEdges, cargoLineMat);
+                    this.cargoBed.add(cargoWireframe);
+
+                    // === 4. CABIN (Buồng lái) ===
+                    const cabinWidth = 1.6;
+                    const cabinHeight = 1.4;
+                    const cabinDepth = 1.1;
+
+                    // Cabin body
+                    const cabinBodyGeo = new THREE.BoxGeometry(cabinWidth, cabinHeight * 0.7, cabinDepth);
+                    const cabinMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x4CAF50,
+                        roughness: 0.4,
+                        metalness: 0.3
+                    });
+                    const cabinBody = new THREE.Mesh(cabinBodyGeo, cabinMaterial);
+                    cabinBody.position.set(0, cabinHeight * 0.35 + 0.3, -(this.TRUCK_SIZE.depth / 2 + cabinDepth / 2 + 0.15));
+                    cabinBody.castShadow = true;
+                    this.truckGroup.add(cabinBody);
+
+                    // Cabin roof (slanted)
+                    const roofGeo = new THREE.BoxGeometry(cabinWidth, 0.15, cabinDepth * 0.8);
+                    const roofMat = new THREE.MeshStandardMaterial({ color: 0x3D8B2E });
+                    const roof = new THREE.Mesh(roofGeo, roofMat);
+                    roof.position.set(0, cabinHeight * 0.7 + 0.3, -(this.TRUCK_SIZE.depth / 2 + cabinDepth / 2 + 0.15));
+                    roof.rotation.x = -0.1;
+                    roof.castShadow = true;
+                    this.truckGroup.add(roof);
+
+                    // Front windshield
+                    const windshieldGeo = new THREE.PlaneGeometry(cabinWidth * 0.7, cabinHeight * 0.5);
+                    const windshieldMat = new THREE.MeshStandardMaterial({
+                        color: 0x87CEEB,
+                        transparent: true,
+                        opacity: 0.5,
+                        side: THREE.DoubleSide
+                    });
+                    const windshield = new THREE.Mesh(windshieldGeo, windshieldMat);
+                    windshield.position.set(0, cabinHeight * 0.5 + 0.3, -(this.TRUCK_SIZE.depth / 2 + cabinDepth + 0.02));
+                    this.truckGroup.add(windshield);
+
+                    // Side windows
+                    const sideWindowGeo = new THREE.PlaneGeometry(cabinDepth * 0.6, cabinHeight * 0.4);
+                    const leftWindow = new THREE.Mesh(sideWindowGeo, windshieldMat);
+                    leftWindow.position.set(-cabinWidth / 2 - 0.01, cabinHeight * 0.45 + 0.3, -(this.TRUCK_SIZE.depth / 2 + cabinDepth / 2 + 0.15));
+                    leftWindow.rotation.y = Math.PI / 2;
+                    this.truckGroup.add(leftWindow);
+
+                    const rightWindow = new THREE.Mesh(sideWindowGeo, windshieldMat);
+                    rightWindow.position.set(cabinWidth / 2 + 0.01, cabinHeight * 0.45 + 0.3, -(this.TRUCK_SIZE.depth / 2 + cabinDepth / 2 + 0.15));
+                    rightWindow.rotation.y = -Math.PI / 2;
+                    this.truckGroup.add(rightWindow);
+
+                    // === 5. WHEELS (Bánh xe) ===
+                    const wheelRadius = 0.28;
+                    const wheelWidth = 0.18;
+                    const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+                    const wheelMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x1a1a1a,
+                        roughness: 0.9
+                    });
+
+                    // Wheel rim (vành bánh)
+                    const rimGeometry = new THREE.CylinderGeometry(wheelRadius * 0.5, wheelRadius * 0.5, wheelWidth * 0.6, 16);
+                    const rimMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x666666,
+                        metalness: 0.7,
+                        roughness: 0.3
+                    });
+
+                    const wheelPositions = [
+                        { x: -0.8, z: -(this.TRUCK_SIZE.depth / 2 + cabinDepth / 2 + 0.1) },  // Front left
+                        { x: 0.8, z: -(this.TRUCK_SIZE.depth / 2 + cabinDepth / 2 + 0.1) },   // Front right
+                        { x: -0.8, z: this.TRUCK_SIZE.depth / 2 - 0.4 },                      // Rear left
+                        { x: 0.8, z: this.TRUCK_SIZE.depth / 2 - 0.4 }                        // Rear right
+                    ];
+
+                    wheelPositions.forEach(pos => {
+                        // Tire
+                        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                        wheel.position.set(pos.x, wheelRadius, pos.z);
+                        wheel.rotation.z = Math.PI / 2;
+                        wheel.castShadow = true;
+                        this.truckGroup.add(wheel);
+
+                        // Rim
+                        const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+                        rim.position.set(pos.x, wheelRadius, pos.z);
+                        rim.rotation.z = Math.PI / 2;
+                        this.truckGroup.add(rim);
+                    });
+
+                    // === 6. DETAILS (Chi tiết) ===
+                    // Headlights
+                    const headlightGeo = new THREE.CircleGeometry(0.1, 16);
+                    const headlightMat = new THREE.MeshStandardMaterial({
+                        color: 0xFFFFAA,
+                        emissive: 0xFFFF00,
+                        emissiveIntensity: 0.3
+                    });
+
+                    [-0.5, 0.5].forEach(x => {
+                        const headlight = new THREE.Mesh(headlightGeo, headlightMat);
+                        headlight.position.set(x, 0.5, -(this.TRUCK_SIZE.depth / 2 + cabinDepth + 0.03));
+                        this.truckGroup.add(headlight);
+                    });
+
+                    // Add truck group to scene
+                    this.scene.add(this.truckGroup);
+                    this.truck = this.cargoBed; // For compatibility
+
+                    // Setup click interaction
+                    this.setupClickInteraction();
+                }
+
+                createRearDoor(side, height, thickness, material) {
+                    // Create pivot group for hinge animation
+                    const doorPivot = new THREE.Group();
+
+                    // Door dimensions (half width for each door)
+                    const doorWidth = this.TRUCK_SIZE.width / 2;
+                    const doorGeo = new THREE.BoxGeometry(doorWidth, height, thickness);
+                    const door = new THREE.Mesh(doorGeo, material.clone());
+                    door.castShadow = true;
+
+                    // Position door relative to pivot (hinge at edge)
+                    if (side === 'left') {
+                        door.position.set(doorWidth / 2, 0, 0);
+                        doorPivot.position.set(-this.TRUCK_SIZE.width / 2, 0.4 + height / 2, this.TRUCK_SIZE.depth / 2);
+                    } else {
+                        door.position.set(-doorWidth / 2, 0, 0);
+                        doorPivot.position.set(this.TRUCK_SIZE.width / 2, 0.4 + height / 2, this.TRUCK_SIZE.depth / 2);
+                    }
+
+                    doorPivot.add(door);
+                    doorPivot.userData = { side: side };
+
+                    return doorPivot;
+                }
+
+                toggleDoors() {
+                    // Prevent multiple animations
+                    if (this.doorsAnimating) return;
+
+                    this.doorsOpen = !this.doorsOpen;
+                    this.doorsAnimating = true;
+
+                    const targetAngle = this.doorsOpen ? Math.PI * 0.6 : 0;
+                    const duration = 800;
+                    const startTime = Date.now();
+
+                    const leftStartAngle = this.leftDoor.rotation.y;
+                    const rightStartAngle = this.rightDoor.rotation.y;
+
+                    const animate = () => {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+
+                        // Ease in-out cubic
+                        const eased = progress < 0.5
+                            ? 4 * progress * progress * progress
+                            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+                        // Apply rotation (left door rotates negative, right door positive)
+                        const leftTarget = this.doorsOpen ? -Math.PI * 0.6 : 0;
+                        const rightTarget = this.doorsOpen ? Math.PI * 0.6 : 0;
+
+                        this.leftDoor.rotation.y = leftStartAngle + (leftTarget - leftStartAngle) * eased;
+                        this.rightDoor.rotation.y = rightStartAngle + (rightTarget - rightStartAngle) * eased;
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animate);
+                        } else {
+                            this.doorsAnimating = false;
+                        }
+                    };
+
+                    animate();
+                }
+
+                setupClickInteraction() {
+                    this.raycaster = new THREE.Raycaster();
+                    this.mouse = new THREE.Vector2();
+                    this.dimensionLabels = null;
+
+                    // Helper to get mouse position
+                    const updateMouse = (event) => {
+                        const rect = this.renderer.domElement.getBoundingClientRect();
+                        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                    };
+
+                    // === DRAG AND DROP SYSTEM (POINTER EVENTS) ===
+                    this.draggedBox = null;
+                    this.dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
+                    this.dragOffset = new THREE.Vector3();
+                    this.isDragging = false;
+                    this.hasMoved = false;
+
+                    // Use Capture Phase to get event before controls
+                    this.renderer.domElement.addEventListener('pointerdown', (event) => {
+                        console.log('POINTER DOWN');
+                        updateMouse(event);
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                        const boxIntersects = this.raycaster.intersectObjects(this.placedBoxes);
+
+                        if (boxIntersects.length > 0) {
+                            console.log('BOX HIT - START DRAG');
+                            this.draggedBox = boxIntersects[0].object;
+                            this.isDragging = true;
+                            this.hasMoved = false;
+
+                            const intersectPoint = new THREE.Vector3();
+                            this.raycaster.ray.intersectPlane(this.dragPlane, intersectPoint);
+                            this.dragOffset.copy(this.draggedBox.position).sub(intersectPoint);
+
+                            this.draggedBox.material.emissive.setHex(0x444444);
+                            this.controls.enabled = false;
+
+                            // Capture pointer to track outside canvas
+                            this.renderer.domElement.setPointerCapture(event.pointerId);
+                            event.stopPropagation();
+                        }
+                    }, true); // CAPTURE = TRUE
+
+                    this.renderer.domElement.addEventListener('pointermove', (event) => {
+                        if (this.isDragging && this.draggedBox) {
+                            this.hasMoved = true;
+                            updateMouse(event);
+                            this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                            const intersectPoint = new THREE.Vector3();
+                            if (this.raycaster.ray.intersectPlane(this.dragPlane, intersectPoint)) {
+                                this.draggedBox.position.copy(intersectPoint.add(this.dragOffset));
+                            }
+                            event.stopPropagation();
+                        }
+                    }, true);
+
+                    this.renderer.domElement.addEventListener('pointerup', (event) => {
+                        if (this.isDragging && this.draggedBox) {
+                            console.log('POINTER UP - DRAG END');
+                            this.draggedBox.material.emissive.setHex(0x000000);
+                            this.draggedBox = null;
+                            this.isDragging = false;
+                            this.controls.enabled = true;
+                            this.renderer.domElement.releasePointerCapture(event.pointerId);
+                            return;
+                        }
+
+                        // Handle clicks (Doors/Dimensions) - Only if NOT a drag
+                        if (!this.hasMoved) {
+                            updateMouse(event);
+                            this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                            const truckIntersects = this.raycaster.intersectObjects(this.truckGroup.children, true);
+                            if (truckIntersects.length > 0) {
+                                const clickedObject = truckIntersects[0].object;
+                                if (clickedObject.parent && clickedObject.parent.userData.side) {
+                                    this.toggleDoors();
+                                } else if (clickedObject.userData.clickable || clickedObject.parent.userData.clickable) {
+                                    this.toggleDimensionLabels();
+                                }
+                            }
+                        }
+                    }, true);
+                }
+
+                removeBox(box) {
+                    // Remove from scene
+                    this.boxesGroup.remove(box);
+
+                    // Remove from array
+                    const index = this.placedBoxes.indexOf(box);
+                    if (index > -1) {
+                        this.placedBoxes.splice(index, 1);
+                    }
+
+                    // Update counter
+                    this.boxCount--;
+                    this.updateCounter();
+                }
+
+                toggleDimensionLabels() {
+                    if (this.dimensionLabels) {
+                        // Remove existing labels
+                        this.scene.remove(this.dimensionLabels);
+                        this.dimensionLabels = null;
+                    } else {
+                        // Create dimension labels
+                        this.dimensionLabels = new THREE.Group();
+
+                        // Chiều dài (2m) - Dọc trục Z
+                        this.createDimensionMeasurement(
+                            '2m',
+                            new THREE.Vector3(this.TRUCK_SIZE.width / 2 + 0.6, 0.4, -this.TRUCK_SIZE.depth / 2),
+                            new THREE.Vector3(this.TRUCK_SIZE.width / 2 + 0.6, 0.4, this.TRUCK_SIZE.depth / 2),
+                            0xFF9800,
+                            new THREE.Vector3(0.5, 0, 0) // Label offset
+                        );
+
+                        // Chiều rộng (1.2m) - Dọc trục X
+                        this.createDimensionMeasurement(
+                            '1.2m',
+                            new THREE.Vector3(-this.TRUCK_SIZE.width / 2, 0.4, this.TRUCK_SIZE.depth / 2 + 0.6),
+                            new THREE.Vector3(this.TRUCK_SIZE.width / 2, 0.4, this.TRUCK_SIZE.depth / 2 + 0.6),
+                            0x2196F3,
+                            new THREE.Vector3(0, 0, 0.5) // Label offset
+                        );
+
+                        // Chiều cao (1.5m) - Dọc trục Y
+                        this.createDimensionMeasurement(
+                            '1.5m',
+                            new THREE.Vector3(-this.TRUCK_SIZE.width / 2 - 0.6, 0.4, this.TRUCK_SIZE.depth / 2 - 0.2),
+                            new THREE.Vector3(-this.TRUCK_SIZE.width / 2 - 0.6, 0.4 + this.TRUCK_SIZE.height, this.TRUCK_SIZE.depth / 2 - 0.2),
+                            0x4CAF50,
+                            new THREE.Vector3(-0.5, 0, 0) // Label offset
+                        );
+
+                        this.scene.add(this.dimensionLabels);
+                    }
+                }
+
+                createDimensionMeasurement(text, start, end, color, labelOffset) {
+                    const dir = new THREE.Vector3().subVectors(end, start);
+                    const length = dir.length();
+                    dir.normalize();
+
+                    const headLength = 0.15;
+                    const headWidth = 0.1;
+
+                    // Arrow pointing to end
+                    const arrow1 = new THREE.ArrowHelper(dir, start, length, color, headLength, headWidth);
+                    if (arrow1.line) arrow1.line.material.linewidth = 2;
+
+                    // Arrow pointing to start
+                    const negDir = dir.clone().negate();
+                    const arrow2 = new THREE.ArrowHelper(negDir, end, length, color, headLength, headWidth);
+                    if (arrow2.line) arrow2.line.material.linewidth = 2;
+
+                    this.dimensionLabels.add(arrow1);
+                    this.dimensionLabels.add(arrow2);
+
+                    // Add auxiliary lines (đường gióng)
+                    const auxMaterial = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.5 });
+
+                    // Direction for auxiliary line is opposite to labelOffset
+                    const auxDir = labelOffset.clone().normalize().negate();
+                    const auxLength = labelOffset.length();
+
+                    const startAuxEnd = start.clone().addScaledVector(auxDir, auxLength + 0.1);
+                    const startAuxGeo = new THREE.BufferGeometry().setFromPoints([start, startAuxEnd]);
+                    this.dimensionLabels.add(new THREE.Line(startAuxGeo, auxMaterial));
+
+                    const endAuxEnd = end.clone().addScaledVector(auxDir, auxLength + 0.1);
+                    const endAuxGeo = new THREE.BufferGeometry().setFromPoints([end, endAuxEnd]);
+                    this.dimensionLabels.add(new THREE.Line(endAuxGeo, auxMaterial));
+
+                    // Label in middle
+                    const midPoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                    if (labelOffset) {
+                        midPoint.add(labelOffset);
+                    }
+                    this.createDimensionLabel(text, midPoint, color);
+                }
+
+                createDimensionLabel(text, position, color) {
+                    // Create canvas for text
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = 256;
+                    canvas.height = 64; // Reduced height for cleaner look
+
+                    // Dùng style đơn giản hơn, bỏ background bo tròn quá mức
+                    context.fillStyle = `rgba(${(color >> 16) & 255}, ${(color >> 8) & 255}, ${color & 255}, 0.8)`;
+                    context.beginPath();
+                    context.roundRect(20, 5, 216, 54, 10);
+                    context.fill();
+
+                    // Draw text
+                    context.fillStyle = 'white';
+                    context.font = 'bold 36px Inter, Arial'; // Smaller font
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    context.shadowColor = "rgba(0, 0, 0, 0.3)";
+                    context.shadowBlur = 4;
+                    context.fillText(text, 128, 32);
+
+                    // Create texture
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false }); // Always show on top
+                    const sprite = new THREE.Sprite(material);
+                    sprite.position.copy(position);
+                    sprite.scale.set(0.8, 0.2, 1); // Adjust aspect ratio for shorter text
+                    sprite.renderOrder = 999;
+
+                    this.dimensionLabels.add(sprite);
+                }
+
+                createGround() {
+                    const geometry = new THREE.PlaneGeometry(20, 20);
+                    const material = new THREE.MeshStandardMaterial({ color: 0x90EE90 });
+                    const ground = new THREE.Mesh(geometry, material);
+                    ground.rotation.x = -Math.PI / 2;
+                    ground.receiveShadow = true;
+                    this.scene.add(ground);
+                }
+
+                addBox() {
+                    if (this.boxCount >= this.MAX_BOXES) {
+                        this.showAnswer();
+                        return;
+                    }
+
+                    const position = this.getNextBoxPosition(this.boxCount);
+                    if (!position) {
+                        console.warn('No more space');
+                        return;
+                    }
+
+                    this.createBox(position);
+                    this.boxCount++;
+                    this.updateCounter();
+
+                    if (this.boxCount === this.MAX_BOXES) {
+                        setTimeout(() => this.showAnswer(), 500);
+                    }
+                }
+
+                getNextBoxPosition(index) {
+                    const x = index % this.GRID.x;
+                    const y = Math.floor(index / this.GRID.x) % this.GRID.y;
+                    const z = Math.floor(index / (this.GRID.x * this.GRID.y));
+
+                    if (z >= this.GRID.z) return null;
+
+                    return {
+                        x: -this.TRUCK_SIZE.width / 2 + x * this.BOX_SIZE.width + this.BOX_SIZE.width / 2,
+                        y: 0.4 + y * this.BOX_SIZE.height + this.BOX_SIZE.height / 2,  // Add floor offset
+                        z: -this.TRUCK_SIZE.depth / 2 + z * this.BOX_SIZE.depth + this.BOX_SIZE.depth / 2
+                    };
+                }
+
+                createBox(position) {
+                    const geometry = new THREE.BoxGeometry(
+                        this.BOX_SIZE.width,
+                        this.BOX_SIZE.height,
+                        this.BOX_SIZE.depth
+                    );
+                    const material = new THREE.MeshStandardMaterial({
+                        color: 0x8D6E63,
+                        roughness: 0.8
+                    });
+                    const box = new THREE.Mesh(geometry, material);
+                    box.position.set(position.x, position.y, position.z);
+                    box.userData.originalPosition = new THREE.Vector3(position.x, position.y, position.z);
+                    box.castShadow = true;
+
+                    // Animation
+                    box.scale.set(0, 0, 0);
+                    this.animateBoxScale(box);
+
+                    this.boxesGroup.add(box);
+                    this.placedBoxes.push(box);
+                }
+
+                animateBoxScale(box) {
+                    const startTime = Date.now();
+                    const duration = 300;
+
+                    const animate = () => {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const eased = 1 - Math.pow(1 - progress, 3); // ease-out
+
+                        box.scale.set(eased, eased, eased);
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animate);
+                        }
+                    };
+
+                    animate();
+                }
+
+                autoFill() {
+                    if (this.boxCount >= this.MAX_BOXES) {
+                        this.showAnswer();
+                        return;
+                    }
+
+                    const remaining = this.MAX_BOXES - this.boxCount;
+                    let delay = 0;
+
+                    for (let i = 0; i < remaining; i++) {
+                        setTimeout(() => this.addBox(), delay);
+                        delay += 50;
+                    }
+                }
+
+                returnBoxes() {
+                    let movedCount = 0;
+                    this.placedBoxes.forEach(box => {
+                        if (box.userData.originalPosition && box.position.distanceTo(box.userData.originalPosition) > 0.01) {
+                            this.animateBoxMove(box, box.userData.originalPosition);
+                            movedCount++;
+                        }
+                    });
+
+                    if (movedCount > 0) {
+                        console.log(`Returning ${movedCount} boxes to original positions`);
+                    } else {
+                        console.log('No boxes to return');
+                    }
+                }
+
+                animateBoxMove(box, targetPos) {
+                    const startPos = box.position.clone();
+                    const startTime = Date.now();
+                    const duration = 600;
+
+                    const animate = () => {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+
+                        box.position.lerpVectors(startPos, targetPos, eased);
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animate);
+                        }
+                    };
+                    animate();
+                }
+
+                reset() {
+                    // Remove all boxes
+                    this.placedBoxes.forEach(box => {
+                        this.boxesGroup.remove(box);
+                    });
+
+                    this.placedBoxes = [];
+                    this.boxCount = 0;
+                    this.updateCounter();
+                    this.hideAnswer();
+                }
+
+                updateCounter() {
+                    document.getElementById('counter').textContent = this.boxCount;
+                }
+
+                showAnswer() {
+                    document.getElementById('answer').classList.add('show');
+                }
+
+                hideAnswer() {
+                    document.getElementById('answer').classList.remove('show');
+                }
+
+                animate() {
+                    requestAnimationFrame(() => this.animate());
+                    this.controls.update();
+                    this.renderer.render(this.scene, this.camera);
+                }
+
+                onResize() {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+            }
+
+            // Initialize app
+            const app = new TruckLoadingApp();
+        </script>
+</body>
+
+</html>
